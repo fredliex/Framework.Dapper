@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{646057E8-F553-444A-9476-00012341F5AD}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Framework</RootNamespace>
+    <AssemblyName>Framework.Dapper</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Dapper, Version=1.50.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Dapper.1.50.2\lib\net451\Dapper.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Data\ColumnAttribute.cs" />
+    <Compile Include="Data\ColumnBehavior.cs" />
+    <Compile Include="Data\ColumnInfo.cs" />
+    <Compile Include="Data\DbHelper.cs" />
+    <Compile Include="Data\IDbHook.cs" />
+    <Compile Include="Data\IModel.cs" />
+    <Compile Include="Data\InternalHelper.cs" />
+    <Compile Include="Data\ModelWrapper.cs" />
+    <Compile Include="Data\ModelWrapper.EnumerableParamWrapper.cs">
+      <DependentUpon>ModelWrapper.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\ModelWrapper.EnumValueHelper.cs">
+      <DependentUpon>ModelWrapper.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\ModelWrapper.ParamWrapper.cs">
+      <DependentUpon>ModelWrapper.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\ModelWrapper.Reflect.cs">
+      <DependentUpon>ModelWrapper.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\ModelWrapper._ToModel.cs">
+      <DependentUpon>ModelWrapper.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\ModelWrapper._ToParam.cs">
+      <DependentUpon>ModelWrapper.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\NonColumnAttribute.cs" />
+    <Compile Include="Data\TableAttribute.cs" />
+    <Compile Include="Data\TableInfo.cs" />
+    <Compile Include="Data\ValueAttribute.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

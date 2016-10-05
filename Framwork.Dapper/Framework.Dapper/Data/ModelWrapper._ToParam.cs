@@ -18,6 +18,37 @@ namespace Framework.Data
 {
     partial class ModelWrapper
     {
+        private sealed class DbTypeInfoStorage : Dictionary<Type, DbTypeInfoStorage.Info>
+        {
+            internal string MemberName { get; }
+            internal DbTypeInfoStorage(string memberName)
+            {
+                MemberName = memberName;
+            }
+
+            internal sealed class Info
+            {
+                public DbType DbType;
+                public ITypeHandler Handler;
+                public bool IsString()
+                {
+                    return DbType == DbType.String || DbType == DbType.AnsiString;
+                }
+            }
+            public Info Get(Type type)
+            {
+                var nullUnderlyingType = Nullable.GetUnderlyingType(type);
+                if (nullUnderlyingType != null) type = nullUnderlyingType;
+                Info info;
+                if (base.TryGetValue(type, out info)) return info;
+                base[type] = info = new Info(); 
+#pragma warning disable 618
+                info.DbType = LookupDbType(type, MemberName, true, out info.Handler);
+#pragma warning restore 618
+                return info;
+            }
+        }
+
         internal static object WrapParam(object param, CommandType commandType, string sql)
         {
             if (param is IDynamicParameters) return param;
@@ -88,12 +119,33 @@ namespace Framework.Data
                     continue;
                 }
 
-                ITypeHandler handler;
+                var dbTypeInfos = new DbTypeInfoStorage(memberName);
+
+                /*
+                Type cacheMemberType = null;
+                ITypeHandler cacheHandler = null;
+                DbType cacheDbType = default(DbType);
+                Func<DbType> getDbType = () =>
+                {
+                    if (cacheMemberType == memberType) return cacheDbType;
 #pragma warning disable 618
-                DbType dbType = LookupDbType(memberType, memberName, true, out handler);
+                    return cacheDbType = LookupDbType(cacheMemberType = memberType, memberName, true, out cacheHandler);
 #pragma warning restore 618
+                };
+                cacheDbType = getDbType();
+                var handler = cacheHandler;
+                */
+
+                //如果還未宣告區域變數loc_1的話, 宣告區域變數
+                Action declareIntArg1 = () =>
+                {
+                    if (haveInt32Arg1) return;
+                    il.DeclareLocal(typeof(int));
+                    haveInt32Arg1 = true;
+                };
+
                 //如果是集合的話, 就處理"in", 這邊按原本Dapper邏輯處理
-                if (dbType == Reflect.Dapper.EnumerableMultiParameter)
+                if (dbTypeInfos.Get(memberType).DbType == Reflect.Dapper.EnumerableMultiParameter)
                 {
                     // this actually represents special handling for list types;
                     il.Emit(OpCodes.Ldarg_0); // stack is now [parameters] [command]
@@ -153,44 +205,178 @@ namespace Framework.Data
                  *                                                                        07. notNullHandle:
                  * }
                  * if (是值類型) {
-                 *    if (Nullable<> 且 無handler)           //type由Nullable<T>換成T     08.    value = value.GetValueOrDefault()
-                 *    if (是Enum 且 無handler) {             //type換成(Enum基礎型別)     09.    value = (Enum基礎型別)value
-                 *       if (有EnumMapping)                                               
-                 *    }
-                 *                                                                        10.    value = (object)value;
+                 *    if (Nullable)                          //type由Nullable<T>換成T     08.    value = value.GetValueOrDefault()
+                 *    if (是Enum 且 無handler) {             //type換成(Enum基礎型別)     
+                 *                                                                        09.    value = (object)value;
                  * } else {
-                 *    if (是System.Data.Linq.Binary) {       //type換成bye[]              11.    value = value.ToArray();
-                 *    } else if (DbType是字串) {                                          12.    loc_1 = value.length > 4000 ? -1 : 4000;
+                 *    if (是System.Data.Linq.Binary) {       //type換成bye[]              10.    value = value.ToArray();
+                 *    } else if (DbType是字串) {                                          11.    loc_1 = value.length > 4000 ? -1 : 4000;
                  *    }
                  * }
-                 * if (前面有goto nullHandleDone)                                         13. nullHandleDone:
-                 * if (有handler) {                                                       14.    SqlMapper.TypeHandlerCache<T>.SetValue(parameter, value);
-                 * } else {                                                               15.    paramter.Value = value;
-                 *    if (DbType非Time)                                                   16.    paramter.DbType = dbType;
+                 * if (前面有goto nullHandleDone)                                         12. nullHandleDone:
+                 * if (有handler) {                                                       13.    SqlMapper.TypeHandlerCache<T>.SetValue(parameter, value);
+                 * } else {                                                               14.    paramter.Value = value;
+                 *    if (DbType非Time)                                                   15.    paramter.DbType = dbType;
                  *    if (DbType是字串)                                                   17.    if (loc_1 != 0) paramter.Size = loc_1;
                  * }
                  *                                                                        18.    paramters.Add(paramter);
                  */
 
-                //01. 有定義EnumValue的話, 取得對應值 
-                Type enumValueType;
-                var enumValueGetter = EnumValueHelper.GetValueGetterMethod(memberType, out enumValueType);
-                if (enumValueGetter != null)
-                {
-                    il.EmitCall(OpCodes.Call, enumValueGetter, null);     // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value]
-                    memberType = enumValueType;
+                //01. memberType沒有handler時判斷 有定義EnumValue的話, 取得對應值 
+                if (dbTypeInfos.Get(memberType).Handler != null)
+                { 
+                    Type enumValueType;
+                    var enumValueGetter = EnumValueHelper.GetValueGetterMethod(memberType, out enumValueType);
+                    if (enumValueGetter != null)
+                    {
+                        il.EmitCall(OpCodes.Call, enumValueGetter, null);     // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value]
+                        memberType = enumValueType;
+                    }
                 }
 
 
+                Label? nullHandleDone = null;
                 Type underlyingType = null;
-                Label? notNullHandle = null;
+                //如果可能為null的話, 才做null的判斷處理
                 if (!memberType.IsValueType || (underlyingType = Nullable.GetUnderlyingType(memberType)) != null)
                 {
-                    il.Emit(OpCodes.Dup);
-                    if (underlyingType == null) il.EmitCall(OpCodes.Call, memberType.GetProperty(nameof(Nullable<int>.HasValue)).GetGetMethod(), null);
-                    notNullHandle = il.DefineLabel();
-                    il.Emit(OpCodes.Brtrue_S, notNullHandle.Value);
+                    var notNullHandle = il.DefineLabel();
+                    //02. 判斷非null的話跳notNullHandle
+                    il.Emit(OpCodes.Dup);    // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value] [typed-value]
+                    if (underlyingType == null) il.EmitCall(OpCodes.Call, memberType.GetProperty(nameof(Nullable<int>.HasValue)).GetGetMethod(), null); // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value] [bool]
+                    //03. goto notNullHandle
+                    il.Emit(OpCodes.Brtrue_S, notNullHandle); // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value]
+
+                    if (column.NullMapping != null)
+                    {
+                        //04. value = NullMapping;
+                        il.Emit(OpCodes.Pop);       // stack is [parameters] [[parameters]] [parameter] [parameter]
+                        il.EmitConstant(column.NullMapping);     // stack is [parameters] [[parameters]] [parameter] [parameter] [NullMapping]
+                        memberType = column.NullMapping.GetType();
+                    }
+                    else
+                    {
+                        //05. 如果DbType是字串, 設定 loc_1 = 0
+                        if (dbTypeInfos.Get(memberType).IsString())
+                        {
+                            declareIntArg1();
+                            Reflect.Dapper.EmitInt32(il, 0);
+                            il.Emit(OpCodes.Stloc_1);
+                        }
+                        //06. 跳到nullHandleDone
+                        nullHandleDone = il.DefineLabel();
+                        il.Emit(OpCodes.Br_S, nullHandleDone.Value);
+                    }
+                    //07. 標記notNullHandle
+                    il.MarkLabel(notNullHandle);
                 }
+
+                if (memberType.IsValueType)
+                {
+                    //08. 如果是Nullable<T>的話, 取出T來
+                    if ((underlyingType = Nullable.GetUnderlyingType(memberType)) != null)
+                    {
+                        il.EmitCall(OpCodes.Call, memberType.GetMethod(nameof(Nullable<int>.GetValueOrDefault)), null); // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value]
+                        memberType = underlyingType;
+                    }
+                    if (memberType.IsEnum && dbTypeInfos.Get(memberType).Handler == null)
+                    {
+                        switch (Type.GetTypeCode(Enum.GetUnderlyingType(memberType)))
+                        {
+                            case TypeCode.Byte: memberType = typeof(byte); break;
+                            case TypeCode.SByte: memberType = typeof(sbyte); break;
+                            case TypeCode.Int16: memberType = typeof(short); break;
+                            case TypeCode.Int32: memberType = typeof(int); break;
+                            case TypeCode.Int64: memberType = typeof(long); break;
+                            case TypeCode.UInt16: memberType = typeof(ushort); break;
+                            case TypeCode.UInt32: memberType = typeof(uint); break;
+                            case TypeCode.UInt64: memberType = typeof(ulong); break;
+                        }
+                    }
+                    //09. value = (object)value
+                    il.Emit(OpCodes.Box, memberType); // stack is [parameters] [[parameters]] [parameter] [parameter] [boxed-value]
+                }
+                else
+                {
+                    //判斷是是System.Data.Linq.Binary的話, 呼叫value.ToArray()取得byte[]
+                    if (memberType.FullName == Reflect.Dapper.LinqBinary)  //System.Data.Linq.Binary
+                    {
+                        //10. value = value.ToArray();
+                        il.EmitCall(OpCodes.Callvirt, memberType.GetMethod("ToArray", BindingFlags.Public | BindingFlags.Instance), null); // stack is [parameters] [[parameters]] [parameter] [parameter] [byte[]]
+                        memberType = typeof(byte[]);
+                    } else if (dbTypeInfos.Get(memberType).IsString()) {
+                        //11. loc_1 = value.length > 4000 ? -1 : 4000;
+                        il.Emit(OpCodes.Dup);    // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value] [typed-value]
+                        il.EmitCall(OpCodes.Callvirt, Reflect.String_Length_Get, null); // // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value] [string length]
+                        Reflect.Dapper.EmitInt32(il, DbString.DefaultLength); // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value] [string length] [4000]
+                        il.Emit(OpCodes.Cgt); // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value] [0 or 1]
+                        Label isLong = il.DefineLabel(), lenDone = il.DefineLabel();
+                        il.Emit(OpCodes.Brtrue_S, isLong); // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value]
+                        Reflect.Dapper.EmitInt32(il, DbString.DefaultLength); // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value] [4000]
+                        il.Emit(OpCodes.Br_S, lenDone);
+                        il.MarkLabel(isLong);
+                        Reflect.Dapper.EmitInt32(il, -1); // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value] [-1]
+                        il.MarkLabel(lenDone);
+                        declareIntArg1();
+                        il.Emit(OpCodes.Stloc_1); // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value]
+                    }
+                }
+
+                //12. 有nullHandleDone的話, 標記nullHandleDone
+                if (nullHandleDone.HasValue) il.MarkLabel(nullHandleDone.Value);
+
+                var dbTypeInfo = dbTypeInfos.Get(memberType);
+                if (dbTypeInfo.Handler != null)
+                {
+                    //13. 呼叫SqlMapper.TypeHandlerCache<T>.SetValue(parameter, value);
+#pragma warning disable 618
+                    il.Emit(OpCodes.Call, typeof(TypeHandlerCache<>).MakeGenericType(memberType).GetMethod(nameof(TypeHandlerCache<int>.SetValue))); // stack is now [parameters] [[parameters]] [parameter]
+#pragma warning restore 618
+                }
+                else
+                {
+                    if (dbTypeInfo.DbType != DbType.Time)
+                    {
+                        OpCodes.
+                        il.Emit(OpCodes.Dup); // stack is now [parameters] [[parameters]] [parameter] [parameter]
+                        if (dbTypeInfo.DbType == DbType.Object && memberType == typeof(object)) // includes dynamic
+                        {
+                            // look it up from the param value
+                            il.Emit(OpCodes.Ldloc_0); // stack is now [parameters] [[parameters]] [parameter] [parameter] [typed-param]
+                            column.EmitGenerateGet(il);  // stack is [parameters] [[parameters]] [parameter] [parameter] [object-value]
+                            il.Emit(OpCodes.Call, Reflect.SqlMapper_GetDbType); // stack is now [parameters] [[parameters]] [parameter] [parameter] [db-type]
+                        }
+                        else
+                        {
+                            Reflect.Dapper.EmitInt32(il, (int)dbType);// stack is now [parameters] [[parameters]] [parameter] [parameter] [db-type]
+                        }
+                        il.EmitCall(OpCodes.Callvirt, Reflect.IDataParameter_DbType_Set, null);// stack is now [parameters] [[parameters]] [parameter]
+                    }
+
+
+
+                    //14. paramter.Value = value;
+                    il.EmitCall(OpCodes.Callvirt, Reflect.IDataParameter_Value_Set, null);// stack is now [parameters] [[parameters]] [parameter]
+                    //15. DbType非Time的話設定paramter.DbType = dbType;
+                    if (dbTypeInfo.DbType != DbType.Time)
+                    {
+                        il.Emit(OpCodes.Dup); // stack is now [parameters] [[parameters]] [parameter] [parameter]
+                        if (dbTypeInfo.DbType == DbType.Object && memberType == typeof(object)) // includes dynamic
+                        {
+                            // look it up from the param value
+                            il.Emit(OpCodes.Ldloc_0); // stack is now [parameters] [[parameters]] [parameter] [parameter] [typed-param]
+                            column.EmitGenerateGet(il);  // stack is [parameters] [[parameters]] [parameter] [parameter] [object-value]
+                            il.Emit(OpCodes.Call, Reflect.SqlMapper_GetDbType); // stack is now [parameters] [[parameters]] [parameter] [parameter] [db-type]
+                        }
+                        else
+                        {
+                            Reflect.Dapper.EmitInt32(il, (int)dbType);// stack is now [parameters] [[parameters]] [parameter] [parameter] [db-type]
+                        }
+                        il.EmitCall(OpCodes.Callvirt, Reflect.IDataParameter_DbType_Set, null);// stack is now [parameters] [[parameters]] [parameter]
+                    }
+                }
+
+
 
 
 

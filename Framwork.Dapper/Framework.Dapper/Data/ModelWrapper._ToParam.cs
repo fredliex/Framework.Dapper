@@ -1,4 +1,4 @@
-﻿//#define saveParamAssembly
+﻿#define saveParamAssembly
 
 using Dapper;
 using System;
@@ -87,6 +87,10 @@ namespace Framework.Data
                 get { return _varDbType ?? (_varDbType = _varOpCodes.Dequeue()).Value; }
             }
 
+#if saveParamAssembly
+            private Func<Delegate> GetDelegate;
+#endif
+
             internal ParamGeneratorBuilder(Type modelType, CommandType commandType, string sql, bool checkForDuplicates)
             {
                 this.modelType = modelType;
@@ -94,11 +98,19 @@ namespace Framework.Data
                 this.sql = sql;
                 this.checkForDuplicates = checkForDuplicates;
 #if saveParamAssembly
-                var assemblyName = new AssemblyName(string.Format("WrapParamInfo", type.Name.StartsWith("<") ? Guid.NewGuid().ToString("N") : type.Name));
+                var assemblyName = new AssemblyName(string.Format("WrapParamInfo", modelType.Name.StartsWith("<") ? Guid.NewGuid().ToString("N") : modelType.Name));
 			    var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave);
 			    var moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName.Name, assemblyName.Name + ".dll");
-			    var builder = moduleBuilder.DefineType(type + "ParamInfoGenerator", TypeAttributes.Public);
+			    var builder = moduleBuilder.DefineType(modelType + "ParamGenerator", TypeAttributes.Public);
 			    var dm = builder.DefineMethod("DynamicCreate", MethodAttributes.Public | MethodAttributes.Static, null, new[] { typeof(IDbCommand), typeof(object) });
+
+                GetDelegate = () =>
+                {
+                    var t = builder.CreateType();
+                    assemblyBuilder.Save(assemblyName.Name + ".dll");
+                    return Delegate.CreateDelegate(typeof(Action<IDbCommand, object>), t.GetMethod(dm.Name));
+                };
+
 #else
                 dm = new DynamicMethod("WrapParamInfo" + Guid.NewGuid().ToString(), null, new[] { typeof(IDbCommand), typeof(object) }, modelType, true);
 #endif
@@ -337,24 +349,26 @@ namespace Framework.Data
                     }
                     else
                     {
-                        //14. dbType非Time的話設定 paramter.DbType;
+                        //14. paramter.Value = value;
+                        il.EmitCall(OpCodes.Callvirt, Reflect.IDataParameter_Value_Set, null);// stack is now [parameters] [parameters] [parameter]
+
+                        //15. dbType非Time的話設定 paramter.DbType;
                         if (dbType != DbType.Time)
                         {
+                            il.Emit(OpCodes.Dup); // stack is now [parameters] [parameters] [parameter] [parameter]
                             if (dbType == DbType.Object && memberType == typeof(object)) // includes dynamic
                             {
                                 // look it up from the param value
-                                il.Emit(OpCodes.Dup); // stack is now [parameters] [parameters] [parameter] [parameter] [typed-value] [typed-value]
-                                il.Emit(OpCodes.Call, Reflect.SqlMapper_GetDbType); // stack is now [parameters] [[parameters]] [parameter] [parameter] [typed-value] [db-type]
+                                il.Emit(OpCodes.Dup); // stack is now [parameters] [parameters] [parameter] [parameter] [parameter]
+                                il.EmitCall(OpCodes.Callvirt, Reflect.IDataParameter_Value_Get, null);// stack is now [parameters] [parameters] [parameter] [parameter] [boxed-value]
+                                il.Emit(OpCodes.Call, Reflect.SqlMapper_GetDbType); // stack is now [parameters] [parameters] [parameter] [parameter] [dbType]
                             }
                             else
                             {
-                                Reflect.Dapper.EmitInt32(il, (int)dbType);// stack is now [parameters] [parameters] [parameter] [parameter] [typed-value] [db-type]
+                                Reflect.Dapper.EmitInt32(il, (int)dbType);// stack is now [parameters] [parameters] [parameter] [parameter] [db-type]
                             }
-                            il.EmitCall(OpCodes.Callvirt, Reflect.IDataParameter_DbType_Set, null);// stack is now [parameters] [parameters] [parameter] [typed-value]
+                            il.EmitCall(OpCodes.Callvirt, Reflect.IDataParameter_DbType_Set, null);// stack is now [parameters] [parameters] [parameter]
                         }
-
-                        //15. paramter.Value = value;
-                        il.EmitCall(OpCodes.Callvirt, Reflect.IDataParameter_Value_Set, null);// stack is now [parameters] [parameters] [parameter]
 
                         //16. if (loc_1 != 0) paramter.Size = loc_1;
                         if (dbType == DbType.String || dbType == DbType.AnsiString)
@@ -395,9 +409,7 @@ namespace Framework.Data
                 il.Emit(OpCodes.Ret);
 
 #if saveParamAssembly
-                var t = builder.CreateType();
-                assemblyBuilder.Save(assemblyName.Name + ".dll");
-                return (Action<IDbCommand, object>)Delegate.CreateDelegate(typeof(Action<IDbCommand, object>), t.GetMethod(dm.Name));
+                return (Action<IDbCommand, object>)GetDelegate();
 #else
                 return (Action<IDbCommand, object>)dm.CreateDelegate(typeof(Action<IDbCommand, object>));
 #endif

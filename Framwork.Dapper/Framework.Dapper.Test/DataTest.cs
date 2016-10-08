@@ -22,10 +22,11 @@ namespace Framework.Test
         internal sealed class PublicInternalModel : IModel
         {
             public string strCol1;
+            [NonColumn]
             public string strCol2 { get; set; }
-            [Column]
+            [NonColumn]
             internal string strCol3;
-            [Column]
+            [NonColumn]
             internal string strCol4 { get; set; }
 
             [NonColumn]

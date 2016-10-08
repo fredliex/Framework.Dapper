@@ -24,6 +24,7 @@ namespace Framework.Data
             internal static readonly MethodInfo IDbCommand_CommandText_Set = typeof(IDbCommand).GetProperty(nameof(IDbCommand.CommandText)).GetSetMethod();
             internal static readonly MethodInfo IDataParameter_ParameterName_Set = typeof(IDataParameter).GetProperty(nameof(IDataParameter.ParameterName)).GetSetMethod();
             internal static readonly MethodInfo IDataParameter_Direction_Set = typeof(IDataParameter).GetProperty(nameof(IDataParameter.Direction)).GetSetMethod();
+            internal static readonly MethodInfo IDataParameter_Value_Get = typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetGetMethod();
             internal static readonly MethodInfo IDataParameter_Value_Set = typeof(IDataParameter).GetProperty(nameof(IDataParameter.Value)).GetSetMethod();
             internal static readonly MethodInfo IDataParameter_DbType_Set = typeof(IDataParameter).GetProperty(nameof(IDataParameter.DbType)).GetSetMethod();
             internal static readonly MethodInfo IDbDataParameter_Size_Set = typeof(IDbDataParameter).GetProperty(nameof(IDbDataParameter.Size)).GetSetMethod();

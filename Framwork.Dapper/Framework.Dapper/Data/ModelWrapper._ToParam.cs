@@ -245,7 +245,7 @@ namespace Framework.Data
                         var notNullHandle = il.DefineLabel();
                         //02. 判斷非null的話跳notNullHandle
                         il.Emit(OpCodes.Dup);    // stack is [parameters] [[parameters]] [parameter] [parameter] [typed-value] [typed-value]
-                        if (underlyingType == null) il.EmitCall(OpCodes.Call, memberType.GetProperty(nameof(Nullable<int>.HasValue)).GetGetMethod(), null); // stack is [parameters] [parameters] [parameter] [parameter] [typed-value] [bool]
+                        if (underlyingType != null) il.EmitCall(OpCodes.Call, memberType.GetProperty(nameof(Nullable<int>.HasValue)).GetGetMethod(), null); // stack is [parameters] [parameters] [parameter] [parameter] [typed-value] [bool]
                         //03. goto notNullHandle
                         il.Emit(OpCodes.Brtrue_S, notNullHandle); // stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
 

@@ -13,11 +13,11 @@ namespace Framework.Data
         internal sealed class ParamWrapper : SqlMapper.IDynamicParameters
         {
             internal object Model;
-            internal Action<IDbCommand, object> ParamInfoGenerator;
+            internal Action<IDbCommand, object> ParamGenerator;
 
             void SqlMapper.IDynamicParameters.AddParameters(IDbCommand command, SqlMapper.Identity identity)
             {
-                ParamInfoGenerator(command, Model);
+                ParamGenerator(command, Model);
             }
         }
     }

@@ -14,7 +14,7 @@ namespace Framework.Test
             command.CommandType = commandType;
             command.CommandText = sql;
             var wraper = (ModelWrapper.ParamWrapper)ModelWrapper.WrapParam(param, CommandType.Text, command.CommandText);
-            wraper.ParamInfoGenerator(command, param);
+            wraper.ParamGenerator(command, param);
             return command;
         }
 

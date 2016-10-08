@@ -24,7 +24,7 @@ namespace Framework.Data
 
                 internal Enumerator(IEnumerable list, Action<IDbCommand, object> paramInfoGenerator)
                 {
-                    wrapper = new ParamWrapper { ParamInfoGenerator = paramInfoGenerator };
+                    wrapper = new ParamWrapper { ParamGenerator = paramInfoGenerator };
                     enumerator = list.GetEnumerator();
                 }
                 public object Current
@@ -48,17 +48,17 @@ namespace Framework.Data
             }
             public IEnumerator GetEnumerator()
             {
-                return new Enumerator(models, paramInfoGenerator);
+                return new Enumerator(models, paramGenerator);
             }
             #endregion
 
             private readonly IEnumerable models;
-            private readonly Action<IDbCommand, object> paramInfoGenerator;
+            private readonly Action<IDbCommand, object> paramGenerator;
 
-            internal EnumerableParamWrapper(IEnumerable models, Action<IDbCommand, object> paramInfoGenerator)
+            internal EnumerableParamWrapper(IEnumerable models, Action<IDbCommand, object> paramGenerator)
             {
                 this.models = models;
-                this.paramInfoGenerator = paramInfoGenerator;
+                this.paramGenerator = paramGenerator;
             }
 
         }

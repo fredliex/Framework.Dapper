@@ -59,17 +59,21 @@ namespace Framework.Data
         private sealed class FieldColumnInfo : ColumnInfo
         {
             private FieldInfo member;
+            private OpCode callOpCode;
             internal override MemberInfo Member { get { return member; } }
             internal override MemberTypes MemberType { get { return MemberTypes.Field; } }
 
-            internal FieldColumnInfo(FieldInfo field, ColumnAttribute columnAttribute) : base(field, field.FieldType, columnAttribute)
+            internal FieldColumnInfo(FieldInfo field, ColumnAttribute columnAttribute, bool isStructModel) : base(field, field.FieldType, columnAttribute)
             {
                 member = field;
+                //callOpCode = field.FieldType.IsValueType ? OpCodes.Ldflda : OpCodes.Ldfld;
+
+                callOpCode = OpCodes.Ldfld;
             }
 
             internal override void EmitGenerateGet(ILGenerator il)
             {
-                il.Emit(OpCodes.Ldfld, member);
+                il.Emit(callOpCode, member);
             }
         }
 
@@ -134,7 +138,7 @@ namespace Framework.Data
                 }
                 columns = members.OrderBy(n => n.Key)
                     .Select(n => n.Value.isField ? 
-                        (ColumnInfo)new FieldColumnInfo((FieldInfo)n.Value.member, n.Value.attr) : 
+                        (ColumnInfo)new FieldColumnInfo((FieldInfo)n.Value.member, n.Value.attr, isStruct) : 
                         new PropertyColumnInfo((PropertyInfo)n.Value.member, n.Value.attr, isStruct)
                     );
             }

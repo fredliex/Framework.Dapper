@@ -23,7 +23,7 @@ namespace Framework.Data
                 /// <summary>當TValue為null時對應的Enum，null表示沒對應。</summary>
                 private static TEnum? nullValue;
 
-                internal static void Init(IList enums, IList values, TEnum? nullMap)
+                public static void Init(IList enums, IList values, TEnum? nullMap)
                 {
 
                     var tmpMapDict = new Dictionary<TEnum, TValue>(enums.Count);
@@ -68,8 +68,11 @@ namespace Framework.Data
                 }
             }
 
-            private static readonly MethodInfo getStructValueMethod = typeof(EnumValueHelper).GetMethod(nameof(ToStructValue));
-            private static readonly MethodInfo getClassValueMethod = typeof(EnumValueHelper).GetMethod(nameof(ToClassValue));
+            private static readonly MethodInfo enumToStruct = typeof(EnumValueHelper).GetMethod(nameof(EnumToStruct));
+            private static readonly MethodInfo enumToClass = typeof(EnumValueHelper).GetMethod(nameof(EnumToClass));
+            private static readonly MethodInfo nullEnumToStruct = typeof(EnumValueHelper).GetMethod(nameof(NullEnumToStruct));
+            private static readonly MethodInfo nullEnumToClass = typeof(EnumValueHelper).GetMethod(nameof(NullEnumToClass));
+
             private static readonly ConcurrentDictionary<Type, Info> infoCache = new ConcurrentDictionary<Type, Info>();
 
             private static Info CreateInfo(Type enumType)
@@ -123,15 +126,18 @@ namespace Framework.Data
             {
                 if (memberType.IsValueType)
                 {
-                    var underlyingType = Nullable.GetUnderlyingType(memberType);
-                    var enumType = underlyingType ?? memberType;
+                    var nullType = Nullable.GetUnderlyingType(memberType);
+                    var enumType = nullType ?? memberType;
                     if (enumType.IsEnum)
                     {
-                        var info = infoCache.GetOrAdd(memberType, CreateInfo);
+                        var info = infoCache.GetOrAdd(enumType, CreateInfo);
                         if (info != null)
                         {
                             valueType = info.ValueType;
-                            return (info.IsStructValue() ? getClassValueMethod : getStructValueMethod).MakeGenericMethod(memberType, info.ValueUnderlyingType);
+                            var method = nullType == null ? 
+                                (info.IsStructValue() ? enumToStruct : enumToClass) : 
+                                (info.IsStructValue() ? nullEnumToStruct : nullEnumToClass);
+                            return method.MakeGenericMethod(enumType, info.ValueUnderlyingType);
                         }
                     }
                 }
@@ -139,7 +145,7 @@ namespace Framework.Data
                 return null;
             }
 
-            public static TValue ToClassValue<TEnum, TValue>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where TValue : class
+            public static TValue EnumToClass<TEnum, TValue>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where TValue : class
             {
                 TValue value;
                 bool isNull;
@@ -147,12 +153,12 @@ namespace Framework.Data
                 throw new Exception($"未定義{enumValue}的對應值");
             }
 
-            public static TValue ToClassValue<TEnum, TValue>(TEnum? enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where TValue : class
+            public static TValue NullEnumToClass<TEnum, TValue>(TEnum? enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where TValue : class
             {
-                return enumValue.HasValue ? ToClassValue<TEnum, TValue>(enumValue.GetValueOrDefault()) : null;
+                return enumValue.HasValue ? EnumToClass<TEnum, TValue>(enumValue.GetValueOrDefault()) : null;
             }
 
-            public static TValue? ToStructValue<TEnum, TValue>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where TValue : struct
+            public static TValue? EnumToStruct<TEnum, TValue>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where TValue : struct
             {
                 TValue value;
                 bool isNull;
@@ -160,9 +166,9 @@ namespace Framework.Data
                 throw new Exception($"未定義{enumValue}的對應值");
             }
 
-            public static TValue? ToStructValue<TEnum, TValue>(TEnum? enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where TValue : struct
+            public static TValue? NullEnumToStruct<TEnum, TValue>(TEnum? enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where TValue : struct
             {
-                return enumValue.HasValue ? ToStructValue<TEnum, TValue>(enumValue.GetValueOrDefault()) : (TValue?)null;
+                return enumValue.HasValue ? EnumToStruct<TEnum, TValue>(enumValue.GetValueOrDefault()) : (TValue?)null;
             }
 
 

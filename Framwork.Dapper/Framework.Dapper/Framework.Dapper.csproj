@@ -58,6 +58,9 @@
     <Compile Include="Data\ModelWrapper.EnumValueHelper.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
+    <Compile Include="Data\ModelWrapper.ParamGeneratorBuilder.cs">
+      <DependentUpon>ModelWrapper.cs</DependentUpon>
+    </Compile>
     <Compile Include="Data\ModelWrapper.ParamWrapper.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
@@ -65,9 +68,6 @@
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
     <Compile Include="Data\ModelWrapper._ToModel.cs">
-      <DependentUpon>ModelWrapper.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Data\ModelWrapper._ToParam.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
     <Compile Include="Data\NonColumnAttribute.cs" />

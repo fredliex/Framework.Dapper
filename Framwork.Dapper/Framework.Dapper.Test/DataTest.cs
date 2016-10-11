@@ -3,12 +3,14 @@ using Framework.Data;
 using System.Data;
 using System.Data.SqlClient;
 using Xunit;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Framework.Test
 {
     public sealed class DataTest
     {
-        private static T GetCommand<T>(object param, string sql, CommandType commandType = CommandType.Text) where T : IDbCommand, new()
+        private static T GetCommand<T>(string sql, object param, CommandType commandType = CommandType.Text) where T : IDbCommand, new()
         {
             var command = new T();
             command.CommandType = commandType;
@@ -32,7 +34,7 @@ namespace Framework.Test
         {
             var model = new NonInterfaceModel { strCol1 = "3", strCol2 = "4", strCol3 = "5", strCol4 = "6", strEnum = StringEnum.B };
             var sqlStr = @"select * from tabA where strCol1=@strCol1 and strCol2=@strCol2 and strCol3=@strCol3 and strCol4=@strCol4 and strEnum=@strEnum";
-            var command = GetCommand<SqlCommand>(model, sqlStr);
+            var command = GetCommand<SqlCommand>(sqlStr, model);
             Assert.Equal(2, command.Parameters.Count);
             command.Parameters
                 .Verify("strCol2", model.strCol2, DbType.String, 4000)
@@ -70,7 +72,7 @@ namespace Framework.Test
             var sqlStr = @"select * from tabA where 
                 strCol1=@strCol1 and strCol2=@strCol2 and strCol3=@strCol3 and strCol4=@strCol4 and
                 nonCol1=@nonCol1 and nonCol2=@nonCol2 and nonCol3=@nonCol3 and nonCol4=@nonCol4";
-            var command = GetCommand<SqlCommand>(model, sqlStr);
+            var command = GetCommand<SqlCommand>(sqlStr, model);
             Assert.Equal(4, command.Parameters.Count);
             command.Parameters
                 .Verify("strCol1", model.strCol1, DbType.String, 4000)
@@ -111,7 +113,7 @@ namespace Framework.Test
         {
             var model = new EnumMappingModel { norEnum = NormalEnum.B, strEnum = StringEnum.B, strCol = "abcd", intCol = 10, decimalCol = 10 };
             var sqlStr = @"select * from tabA where norEnum=@norEnum and strEnum=@strEnum and strCol=@strCol and intCol=@intCol and decimalCol=@decimalCol";
-            var command = GetCommand<SqlCommand>(model, sqlStr);
+            var command = GetCommand<SqlCommand>(sqlStr, model);
             Assert.Equal(5, command.Parameters.Count);
             command.Parameters
                 .Verify("norEnum", (int)model.norEnum, DbType.Int32)
@@ -138,7 +140,7 @@ namespace Framework.Test
             var model = new NullableModel { norEnum = NormalEnum.B, strEnum = StringEnum.B, strCol = "abcd", intCol = 10, decimalCol = null };
             var sqlStr = @"select * from tabA where norEnum=@norEnum and strEnum=@strEnum and strCol=@strCol and intCol=@intCol and decimalCol=@decimalCol";
 
-            var command = GetCommand<SqlCommand>(model, sqlStr);
+            var command = GetCommand<SqlCommand>(sqlStr, model);
             Assert.Equal(5, command.Parameters.Count);
             command.Parameters
                 .Verify("norEnum", 2, DbType.Int32)
@@ -149,7 +151,7 @@ namespace Framework.Test
 
 
             model = new NullableModel();
-            command = GetCommand<SqlCommand>(model, sqlStr);
+            command = GetCommand<SqlCommand>(sqlStr, model);
             Assert.Equal(5, command.Parameters.Count);
             command.Parameters
                 .Verify("norEnum", DBNull.Value, DbType.Int32)
@@ -180,7 +182,7 @@ namespace Framework.Test
         {
             var model = new NullMappingModel();
             var sqlStr = @"select * from tabA where norEnum=@norEnum and strEnum=@strEnum and strCol=@strCol and intCol=@intCol and decimalCol=@decimalCol";
-            var command = GetCommand<SqlCommand>(model, sqlStr);
+            var command = GetCommand<SqlCommand>(sqlStr, model);
             Assert.Equal(5, command.Parameters.Count);
             command.Parameters
                 .Verify("norEnum", "A", DbType.String, 4000)
@@ -188,6 +190,29 @@ namespace Framework.Test
                 .Verify("strCol", 2D, DbType.Double)
                 .Verify("intCol", 3L, DbType.Int64)
                 .Verify("decimalCol", 1, DbType.Int32);
+        }
+        #endregion
+
+        #region 集合
+        [Fact(DisplayName = "集合")]
+        public void EnumerableParam()
+        {
+            var sqlStr = @"select * from tabA col in @col";
+            var command = GetCommand<SqlCommand>(sqlStr, new { col = new[] { "A", null, "C" } });
+            Assert.Equal("select * from tabA col in (@col1,@col2,@col3)", command.CommandText);
+            Assert.Equal(3, command.Parameters.Count);
+            command.Parameters
+                .Verify("col1", "A", DbType.String, 4000)
+                .Verify("col2", DBNull.Value, DbType.String, 4000)   //總感覺這邊應該要是0才對,而不是4000
+                .Verify("col3", "C", DbType.String, 4000);
+
+            command = GetCommand<SqlCommand>(sqlStr, new { col = new StringEnum?[] { StringEnum.A, null, StringEnum.C } });
+            Assert.Equal("select * from tabA col in (@col1,@col2,@col3)", command.CommandText);
+            Assert.Equal(3, command.Parameters.Count);
+            command.Parameters
+                .Verify("col1", "aa", DbType.String, 4000)
+                .Verify("col2", DBNull.Value, DbType.String, 4000)   //總感覺這邊應該要是0才對,而不是4000
+                .Verify("col3", "cc", DbType.String, 4000);
         }
         #endregion
     }

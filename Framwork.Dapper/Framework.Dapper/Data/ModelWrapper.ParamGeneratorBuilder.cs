@@ -156,6 +156,12 @@ namespace Framework.Data
                         il.Emit(OpCodes.Ldstr, memberName); // stack is now [parameters] [command] [name]
                         il.Emit(OpCodes.Ldloc_0); // stack is now [parameters] [command] [name] [typed-param]
                         column.EmitGenerateGet(il);  // stack is [parameters] [command] [name] [typed-value]
+
+                        //有定義EnumValue的話, 做轉換處理
+                        Type enumValueType;
+                        var enumValuesGetter = EnumValueHelper.GetValuesGetterMethod(memberType, out enumValueType);
+                        if (enumValuesGetter != null) il.EmitCall(OpCodes.Call, enumValuesGetter, null);     //stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
+
                         if (memberType.IsValueType) il.Emit(OpCodes.Box, memberType); // stack is [parameters] [command] [name] [boxed-value]
                         il.EmitCall(OpCodes.Call, Reflect.SqlMapper_PackListParameters, null); // stack is [parameters]
                         continue;

@@ -156,6 +156,7 @@ namespace Framework.Data
                 return method.MakeGenericMethod(info.EnumType, info.ValueUnderlyingType);
             }
 
+
             internal static MethodInfo GetValuesGetterMethod(Type memberType, out Type valueType)
             {
                 valueType = null;

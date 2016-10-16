@@ -30,6 +30,8 @@ namespace Framework.Data
         internal static object WrapParam(object param, CommandType commandType, string sql)
         {
             if (param is IDynamicParameters) return param;
+            var dict = param as IEnumerable<KeyValuePair<string, object>>;
+            if (dict != null) param = ParamGeneratorBuilder.WrapDictionaryParam(dict);
             var paramGeneratorBuilder = new ParamGeneratorBuilder(param.GetType(), commandType, sql, false);
             var paramGenerator = paramGeneratorBuilder.CreateGenerator();
             var models = param as IEnumerable;

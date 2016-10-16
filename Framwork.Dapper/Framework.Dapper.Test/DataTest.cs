@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using Xunit;
 using System.Collections.Generic;
 using System.Linq;
+using System.Collections;
 
 namespace Framework.Test
 {
@@ -215,5 +216,18 @@ namespace Framework.Test
                 .Verify("col3", "cc", DbType.String, 4000);
         }
         #endregion
+
+        [Fact(DisplayName = "亂七八糟")]
+        public void abc()
+        {
+            var aaa = new[] { StringEnum.A, StringEnum.B };
+            var type = aaa.GetType();
+            if (type == typeof(string)) return;
+
+
+            if (aaa is string) return;
+            System.Collections.Generic
+            var bbb = aaa is string && aaa as IEnumerable;
+        }
     }
 }

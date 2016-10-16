@@ -535,6 +535,35 @@ namespace Framework.Data
                 }
                 return enumType;
             }
+
+            internal static Dictionary<string, object> WrapDictionaryParam(IEnumerable<KeyValuePair<string, object>> dict)
+            {
+                return dict.ToDictionary(n => n.Key, n =>
+                {
+                    var value = n.Value;
+                    if (value == null) return value;
+                    var list = value as IEnumerable;
+                    if (list != null)
+                    {
+                        if (list is string) return value;
+
+
+
+                    }
+                    else 
+                    {
+                        var type = value.GetType();
+                        var nullType = Nullable.GetUnderlyingType(type);
+                        if ((nullType ?? type).IsEnum)
+                        {
+                            Type valueType;
+                            var method = EnumValueHelper.GetValueGetterMethod(nullType ?? type, out valueType);
+                            if (method != null) return method.Invoke(null, new object[] { n.Value });
+                        }
+                    }
+                    return n.Value;
+                });
+            }
         }
     }
 }

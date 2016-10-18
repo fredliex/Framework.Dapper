@@ -17,6 +17,7 @@ using static Dapper.SqlMapper;
 
 namespace Framework.Data
 {
+
     public static partial class ModelWrapper
     {
         private static ConcurrentDictionary<Type, TableInfo> tableInfoCache = new ConcurrentDictionary<Type, TableInfo>();
@@ -31,7 +32,7 @@ namespace Framework.Data
         {
             if (param is IDynamicParameters) return param;
             var dict = param as IEnumerable<KeyValuePair<string, object>>;
-            if (dict != null) param = ParamGeneratorBuilder.WrapDictionaryParam(dict);
+            if (dict != null) return ParamGeneratorBuilder.WrapDictionaryParam(dict);
             var paramGeneratorBuilder = new ParamGeneratorBuilder(param.GetType(), commandType, sql, false);
             var paramGenerator = paramGeneratorBuilder.CreateGenerator();
             var models = param as IEnumerable;

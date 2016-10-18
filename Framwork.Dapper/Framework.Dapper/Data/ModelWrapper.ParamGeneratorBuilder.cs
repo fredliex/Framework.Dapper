@@ -543,25 +543,12 @@ namespace Framework.Data
                     var value = n.Value;
                     if (value == null) return value;
                     var list = value as IEnumerable;
-                    if (list != null)
-                    {
-                        if (list is string) return value;
-
-
-
-                    }
-                    else 
-                    {
-                        var type = value.GetType();
-                        var nullType = Nullable.GetUnderlyingType(type);
-                        if ((nullType ?? type).IsEnum)
-                        {
-                            Type valueType;
-                            var method = EnumValueHelper.GetValueGetterMethod(nullType ?? type, out valueType);
-                            if (method != null) return method.Invoke(null, new object[] { n.Value });
-                        }
-                    }
-                    return n.Value;
+                    Type valueType;
+                    var method =
+                        list == null ? EnumValueHelper.GetValueGetterMethod(value.GetType(), out valueType) :
+                        !(list is string) ? EnumValueHelper.GetValuesGetterMethod(value.GetType(), out valueType) :
+                        null;
+                    return method == null ? value : method.Invoke(null, new object[] { value });
                 });
             }
         }

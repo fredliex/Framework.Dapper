@@ -6,6 +6,8 @@ using Xunit;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections;
+using Dapper;
+using System.Reflection;
 
 namespace Framework.Test
 {
@@ -16,8 +18,19 @@ namespace Framework.Test
             var command = new T();
             command.CommandType = commandType;
             command.CommandText = sql;
-            var wraper = (ModelWrapper.ParamWrapper)ModelWrapper.WrapParam(param, CommandType.Text, command.CommandText);
-            wraper.ParamGenerator(command, param);
+            var tmpParam = ModelWrapper.WrapParam(param, CommandType.Text, command.CommandText);
+            var wraper = tmpParam as ModelWrapper.ParamWrapper;
+            if (wraper != null)
+            {
+                wraper.ParamGenerator(command, param);
+            }
+            else
+            {
+                var constructorParamTypes = new[] { typeof(string), typeof(CommandType?), typeof(IDbConnection), typeof(Type), typeof(Type), typeof(Type[]) };
+                var constructorParams = new object[] { sql, commandType, new SqlConnection(), null, tmpParam.GetType(), null };
+                var identity = (SqlMapper.Identity)typeof(SqlMapper.Identity).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, constructorParamTypes, null).Invoke(constructorParams);
+                ((SqlMapper.IDynamicParameters)new DynamicParameters(tmpParam)).AddParameters(command, identity);
+            }
             return command;
         }
 
@@ -217,17 +230,56 @@ namespace Framework.Test
         }
         #endregion
 
-        [Fact(DisplayName = "亂七八糟")]
-        public void abc()
+        #region 
+        [Fact(DisplayName = "字典")]
+        public void DictionaryParam()
         {
-            var aaa = new[] { StringEnum.A, StringEnum.B };
-            var type = aaa.GetType();
-            if (type == typeof(string)) return;
+            /*
+            //一般資料
+            var sqlStr = @"select * from tabA col1 = @col1 and col2 = @col2";
+            var command = GetCommand<SqlCommand>(sqlStr, new Dictionary<string, object>
+            {
+                ["col1"] = "A",
+                ["col2"] = "B",
+            });
+            Assert.Equal(2, command.Parameters.Count);
+            command.Parameters
+                .Verify("col1", "A", DbType.String, 4000)
+                .Verify("col2", "B", DbType.String, 4000);
 
+            //有EnumValue
+            command = GetCommand<SqlCommand>(sqlStr, new Dictionary<string, object>
+            {
+                ["col1"] = StringEnum.A,
+                ["col2"] = StringEnum.B,
+            });
+            Assert.Equal(2, command.Parameters.Count);
+            command.Parameters
+                .Verify("col1", "aa", DbType.String, 4000)
+                .Verify("col2", "bb", DbType.String, 4000);
 
-            if (aaa is string) return;
-            System.Collections.Generic
-            var bbb = aaa is string && aaa as IEnumerable;
+            //EnumValue的集合
+            command = GetCommand<SqlCommand>("select * from tabA col in @col", new Dictionary<string, object> 
+            {
+                ["col"] = new[] { StringEnum.A, StringEnum.B }
+            });
+            Assert.Equal("select * from tabA col in (@col1,@col2)", command.CommandText);
+            Assert.Equal(2, command.Parameters.Count);
+            command.Parameters
+                .Verify("col1", "aa", DbType.String, 4000)
+                .Verify("col2", "bb", DbType.String, 4000);
+            */
+
+            //DynamicParameters
+            //var param = new DynamicParameters(new { col = new[] { StringEnum.A, StringEnum.B } });
+            var param = new DynamicParameters(new { col = "A" });
+             var command = GetCommand<SqlCommand>("select * from tabA col in @col", param);
+            Assert.Equal("select * from tabA col in (@col1,@col2)", command.CommandText);
+            Assert.Equal(2, command.Parameters.Count);
+            command.Parameters
+                .Verify("col1", "aa", DbType.String, 4000)
+                .Verify("col2", "bb", DbType.String, 4000);
         }
+        #endregion
     }
 }

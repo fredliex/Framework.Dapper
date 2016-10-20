@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -14,6 +15,100 @@ namespace Framework.Data
     {
         private static class EnumValueHelper
         {
+            private abstract class EnumHandlerBase : Dapper.SqlMapper.ITypeHandler
+            {
+                public readonly Type EnumType;
+                public readonly Type ValueType;
+                public readonly Type ValueUnderlyingType;
+                public readonly MethodInfo ValueGetterMethod;
+                protected MethodInfo methodNullableValueGetter;
+                protected readonly MethodInfo methodValueGetter;
+
+                public MethodInfo GetValueGetterMethod(bool isNullableValue)
+                {
+                    return isNullableValue ? methodNullableValueGetter : methodValueGetter;
+                }
+
+                internal bool IsStructValue
+                {
+                    //如果是物件類型的話, ValueType會等於ValueUnderlyingType }
+                    get { return ValueType != ValueUnderlyingType; }
+                }
+
+                protected EnumHandlerBase(Type enumType, Type valueUnderlyingType)
+                {
+                    EnumType = enumType;
+                    ValueUnderlyingType = valueUnderlyingType;
+                    ValueType = valueUnderlyingType.IsValueType ? typeof(Nullable<>).MakeGenericType(valueUnderlyingType) : valueUnderlyingType;
+
+
+
+                    var method = isNullable ?
+                        (info.IsStructValue() ? nullEnumToStruct : nullEnumToClass) :
+                        (info.IsStructValue() ? enumToStruct : enumToClass);
+
+                }
+
+                public abstract void SetValue(IDbDataParameter parameter, object value);
+                public abstract object Parse(Type destinationType, object value);
+            }
+
+            private sealed class EnumHandler<TEnum, TValue> : EnumHandlerBase where TEnum : struct, IComparable, IFormattable, IConvertible
+            {
+                /// <summary>Enum轉資料庫欄位值的對應</summary>
+                private readonly ReadOnlyDictionary<TEnum, TValue> toValueMap;
+                /// <summary>資料庫欄位值轉Enum的對應</summary>
+                private readonly ReadOnlyDictionary<TValue, TEnum> toEnumMap;
+                /// <summary>當TValue為null時對應的Enum，null表示沒對應。</summary>
+                private readonly TEnum? nullValue;
+
+                public EnumHandler(IList enums, IList values, TEnum? nullValue) : base(typeof(TEnum), typeof(TValue))
+                {
+                    var tmpMapDict = new Dictionary<TEnum, TValue>(enums.Count);
+                    var tmpEnumDict = new Dictionary<TValue, TEnum>(enums.Count);
+                    for (var i = 0; i < enums.Count; i++)
+                    {
+                        var enumValue = (TEnum)enums[i];
+                        var mapValue = (TValue)values[i];
+                        tmpMapDict[enumValue] = mapValue;
+                        tmpEnumDict[mapValue] = enumValue;
+                    }
+                    this.nullValue = nullValue;
+                    toValueMap = new ReadOnlyDictionary<TEnum, TValue>(tmpMapDict);
+                    toEnumMap = new ReadOnlyDictionary<TValue, TEnum>(tmpEnumDict);
+
+                    var isStructValue = !typeof(TValue).IsClass;
+                    methodNullableValueGetter = typeof(EnumHandlerCache<TEnum>).GetMethod(isStructValue ? nameof(EnumHandlerCache<TEnum>.))
+                }
+
+                internal bool TryGetValue(TEnum vEnum, out TValue vValue, out bool isNullValue)
+                {
+                    isNullValue = false;
+                    vValue = default(TValue);
+                    if (nullValue.HasValue && EqualityComparer<TEnum>.Default.Equals(nullValue.GetValueOrDefault(), vEnum))
+                    {
+                        isNullValue = true;
+                        return true;
+                    }
+                    return toValueMap.TryGetValue(vEnum, out vValue);
+                }
+
+                public override object Parse(Type destinationType, object value)
+                {
+                    throw new NotImplementedException();
+                }
+
+                public override void SetValue(IDbDataParameter parameter, object vEnum)
+                {
+                    TValue value;
+                    bool isNull;
+                    if (!TryGetValue((TEnum)vEnum, out value, out isNull)) throw new Exception($"未定義{vEnum}的對應值");
+                    parameter.Value = isNull ? (object)DBNull.Value : value;
+                }
+            }
+
+
+            /*
             private static class EnumMapCache<TEnum, TValue> where TEnum : struct, IComparable, IFormattable, IConvertible
             {
                 /// <summary>Enum轉資料庫欄位值的對應</summary>
@@ -52,7 +147,9 @@ namespace Framework.Data
                     return toValueMap.TryGetValue(vEnum, out vValue);
                 }
             }
+            */
 
+            /*
             private sealed class Info
             {
                 public Type EnumType { get; }
@@ -69,6 +166,64 @@ namespace Framework.Data
                     return ValueType != ValueUnderlyingType;  //如果是物件類型的話, ValueType會等於ValueUnderlyingType
                 }
             }
+            */
+
+            private static class EnumHandlerCache<TEnum> where TEnum : struct, IComparable, IFormattable, IConvertible
+            {
+                internal static EnumHandlerBase Handler;
+
+                #region 單個
+                public static TValue EnumToClass<TValue>(TEnum enumValue) where TValue : class
+                {
+                    var handler = (EnumHandler<TEnum, TValue>)Handler;
+                    TValue value;
+                    bool isNull;
+                    if (handler.TryGetValue(enumValue, out value, out isNull)) return isNull ? null : value;
+                    throw new Exception($"未定義{enumValue}的對應值");
+                }
+
+                public static TValue NullEnumToClass<TValue>(TEnum? enumValue) where TValue : class
+                {
+                    return enumValue.HasValue ? EnumToClass<TValue>(enumValue.GetValueOrDefault()) : null;
+                }
+
+                public static TValue? EnumToStruct<TValue>(TEnum enumValue) where TValue : struct
+                {
+                    var handler = (EnumHandler<TEnum, TValue>)Handler;
+                    TValue value;
+                    bool isNull;
+                    if (handler.TryGetValue(enumValue, out value, out isNull)) return isNull ? (TValue?)null : value;
+                    throw new Exception($"未定義{enumValue}的對應值");
+                }
+
+                public static TValue? NullEnumToStruct<TValue>(TEnum? enumValue) where TValue : struct
+                {
+                    return enumValue.HasValue ? EnumToStruct<TValue>(enumValue.GetValueOrDefault()) : (TValue?)null;
+                }
+                #endregion
+
+                #region 集合
+                public static IEnumerable<TValue> EnumsToClassValues<TValue>(IEnumerable<TEnum> enumValues) where TValue : class
+                {
+                    return enumValues.Select(EnumToClass<TValue>);
+                }
+
+                public static IEnumerable<TValue> NullEnumsToClassValues<TValue>(IEnumerable<TEnum?> enumValues) where TValue : class
+                {
+                    return enumValues.Select(NullEnumToClass<TValue>);
+                }
+
+                public static IEnumerable<TValue?> EnumsToStructValues<TValue>(IEnumerable<TEnum> enumValues) where TValue : struct
+                {
+                    return enumValues.Select(EnumToStruct<TValue>);
+                }
+
+                public static IEnumerable<TValue?> NullEnumsToStructValues<TValue>(IEnumerable<TEnum?> enumValues) where TValue : struct
+                {
+                    return enumValues.Select(NullEnumToStruct<TValue>);
+                }
+                #endregion
+            }
 
             private static readonly MethodInfo enumToStruct = typeof(EnumValueHelper).GetMethod(nameof(EnumToStruct));
             private static readonly MethodInfo enumToClass = typeof(EnumValueHelper).GetMethod(nameof(EnumToClass));
@@ -80,9 +235,9 @@ namespace Framework.Data
             private static readonly MethodInfo nullEnumsToStructValues = typeof(EnumValueHelper).GetMethod(nameof(NullEnumsToStructValues));
             private static readonly MethodInfo nullEnumsToClassValues = typeof(EnumValueHelper).GetMethod(nameof(NullEnumsToClassValues));
 
-            private static readonly ConcurrentDictionary<Type, Info> infoCache = new ConcurrentDictionary<Type, Info>();
+            private static readonly ConcurrentDictionary<Type, EnumHandlerBase> infoCache = new ConcurrentDictionary<Type, EnumHandlerBase>();
 
-            private static Info CreateInfo(Type enumType)
+            private static EnumHandlerBase CreateHandler(Type enumType)
             {
                 var fields = enumType.GetFields(BindingFlags.Static | BindingFlags.Public);
                 var enums = new ArrayList(fields.Length);
@@ -124,6 +279,7 @@ namespace Framework.Data
                 #endregion
                 if (valueType == null) return null;
                 if (enumType.IsDefined(typeof(FlagsAttribute))) throw new NotSupportedException("目前不支援有標示FlagsAttribute的列舉");
+
                 typeof(EnumMapCache<,>).MakeGenericType(enumType, valueType).GetMethod(nameof(EnumMapCache<int, int>.Init)).Invoke(null, new object[] { enums, values, nullEnum });
                 return new Info(enumType, valueType);
             }
@@ -137,7 +293,7 @@ namespace Framework.Data
                     var nullType = Nullable.GetUnderlyingType(memberType);
                     var enumType = nullType ?? memberType;
                     isNullable = nullType != null;
-                    if (enumType.IsEnum) return infoCache.GetOrAdd(enumType, CreateInfo);
+                    if (enumType.IsEnum) return infoCache.GetOrAdd(enumType, CreateHandler);
                 }
                 return null;
             }
@@ -173,6 +329,7 @@ namespace Framework.Data
                 return method.MakeGenericMethod(info.EnumType, info.ValueUnderlyingType);
             }
 
+            /*
             #region 單個
             public static TValue EnumToClass<TEnum, TValue>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where TValue : class
             {
@@ -200,7 +357,11 @@ namespace Framework.Data
                 return enumValue.HasValue ? EnumToStruct<TEnum, TValue>(enumValue.GetValueOrDefault()) : (TValue?)null;
             }
             #endregion
+            */
 
+
+
+            /*
             #region 集合
             public static IEnumerable<TValue> EnumsToClassValues<TEnum, TValue>(IEnumerable<TEnum> enumValues) where TEnum : struct, IComparable, IFormattable, IConvertible where TValue : class
             {
@@ -222,6 +383,7 @@ namespace Framework.Data
                 return enumValues.Select(NullEnumToStruct<TEnum, TValue>);
             }
             #endregion
+            */
 
         }
     }

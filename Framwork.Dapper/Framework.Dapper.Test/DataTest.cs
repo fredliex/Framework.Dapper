@@ -271,8 +271,8 @@ namespace Framework.Test
             */
 
             //DynamicParameters
-            //var param = new DynamicParameters(new { col = new[] { StringEnum.A, StringEnum.B } });
-            var param = new DynamicParameters(new { col = "A" });
+            var param = new DynamicParameters(new { col = new[] { StringEnum.A, StringEnum.B } });
+            //var param = new DynamicParameters(new { col = "A" });
              var command = GetCommand<SqlCommand>("select * from tabA col in @col", param);
             Assert.Equal("select * from tabA col in (@col1,@col2)", command.CommandText);
             Assert.Equal(2, command.Parameters.Count);

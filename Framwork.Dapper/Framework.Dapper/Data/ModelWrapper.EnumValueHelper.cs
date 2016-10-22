@@ -17,36 +17,46 @@ namespace Framework.Data
         {
             private abstract class EnumHandlerBase : Dapper.SqlMapper.ITypeHandler
             {
-                public readonly Type EnumType;
-                public readonly Type ValueType;
-                public readonly Type ValueUnderlyingType;
-                public readonly MethodInfo ValueGetterMethod;
-                protected MethodInfo methodNullableValueGetter;
-                protected readonly MethodInfo methodValueGetter;
+                internal readonly Type EnumType;
+                internal readonly Type ValueType;
+                internal readonly Type ValueUnderlyingType;
+                //public readonly MethodInfo ValueGetterMethod;
+                internal readonly MethodInfo enumToValue;    //enum 轉 value
+                internal readonly MethodInfo enumsToValues;  //enums 轉 values
+                internal readonly MethodInfo nullEnumToValue;  //nullable<enum> 轉 value
+                internal readonly MethodInfo nullEnumsToValues; //nullable<enum>s 轉 values
 
-                public MethodInfo GetValueGetterMethod(bool isNullableValue)
+                /*
+                internal MethodInfo GetValueGetterMethod(bool isNullableEnum)
                 {
-                    return isNullableValue ? methodNullableValueGetter : methodValueGetter;
+                    return isNullableEnum ? nullEnumToValue : enumToValue;
                 }
-
-                internal bool IsStructValue
+                internal MethodInfo GetValuesGetterMethod(bool isNullableEnum)
                 {
-                    //如果是物件類型的話, ValueType會等於ValueUnderlyingType }
-                    get { return ValueType != ValueUnderlyingType; }
+                    return isNullableEnum ? nullEnumsToValues : enumsToValues;
                 }
+                */
 
-                protected EnumHandlerBase(Type enumType, Type valueUnderlyingType)
+                protected EnumHandlerBase(Type enumType, Type valueUnderlyingType, Type enumCacheType)
                 {
                     EnumType = enumType;
                     ValueUnderlyingType = valueUnderlyingType;
-                    ValueType = valueUnderlyingType.IsValueType ? typeof(Nullable<>).MakeGenericType(valueUnderlyingType) : valueUnderlyingType;
-
-
-
-                    var method = isNullable ?
-                        (info.IsStructValue() ? nullEnumToStruct : nullEnumToClass) :
-                        (info.IsStructValue() ? enumToStruct : enumToClass);
-
+                    if (valueUnderlyingType.IsValueType)
+                    {
+                        ValueType = typeof(Nullable<>).MakeGenericType(valueUnderlyingType);
+                        enumToValue = enumCacheType.GetMethod(nameof(EnumHandlerCache<int>.EnumToStruct)).MakeGenericMethod(valueUnderlyingType);
+                        enumsToValues = enumCacheType.GetMethod(nameof(EnumHandlerCache<int>.EnumsToStructValues)).MakeGenericMethod(valueUnderlyingType);
+                        nullEnumToValue = enumCacheType.GetMethod(nameof(EnumHandlerCache<int>.NullEnumToStruct)).MakeGenericMethod(valueUnderlyingType);
+                        nullEnumsToValues = enumCacheType.GetMethod(nameof(EnumHandlerCache<int>.NullEnumsToStructValues)).MakeGenericMethod(valueUnderlyingType);
+                    }
+                    else
+                    {
+                        ValueType = valueUnderlyingType;
+                        enumToValue = enumCacheType.GetMethod(nameof(EnumHandlerCache<int>.EnumToClass)).MakeGenericMethod(valueUnderlyingType);
+                        enumsToValues = enumCacheType.GetMethod(nameof(EnumHandlerCache<int>.EnumsToClassValues)).MakeGenericMethod(valueUnderlyingType);
+                        nullEnumToValue = enumCacheType.GetMethod(nameof(EnumHandlerCache<int>.NullEnumToClass)).MakeGenericMethod(valueUnderlyingType);
+                        nullEnumsToValues = enumCacheType.GetMethod(nameof(EnumHandlerCache<int>.NullEnumsToClassValues)).MakeGenericMethod(valueUnderlyingType);
+                    }
                 }
 
                 public abstract void SetValue(IDbDataParameter parameter, object value);
@@ -62,7 +72,7 @@ namespace Framework.Data
                 /// <summary>當TValue為null時對應的Enum，null表示沒對應。</summary>
                 private readonly TEnum? nullValue;
 
-                public EnumHandler(IList enums, IList values, TEnum? nullValue) : base(typeof(TEnum), typeof(TValue))
+                public EnumHandler(IList enums, IList values, object nullValue) : base(typeof(TEnum), typeof(TValue), typeof(EnumHandlerCache<TEnum>))
                 {
                     var tmpMapDict = new Dictionary<TEnum, TValue>(enums.Count);
                     var tmpEnumDict = new Dictionary<TValue, TEnum>(enums.Count);
@@ -73,12 +83,11 @@ namespace Framework.Data
                         tmpMapDict[enumValue] = mapValue;
                         tmpEnumDict[mapValue] = enumValue;
                     }
-                    this.nullValue = nullValue;
+                    this.nullValue = (TEnum?)nullValue;
                     toValueMap = new ReadOnlyDictionary<TEnum, TValue>(tmpMapDict);
                     toEnumMap = new ReadOnlyDictionary<TValue, TEnum>(tmpEnumDict);
 
-                    var isStructValue = !typeof(TValue).IsClass;
-                    methodNullableValueGetter = typeof(EnumHandlerCache<TEnum>).GetMethod(isStructValue ? nameof(EnumHandlerCache<TEnum>.))
+                    EnumHandlerCache<TEnum>.Handler = this;
                 }
 
                 internal bool TryGetValue(TEnum vEnum, out TValue vValue, out bool isNullValue)
@@ -225,6 +234,7 @@ namespace Framework.Data
                 #endregion
             }
 
+            /*
             private static readonly MethodInfo enumToStruct = typeof(EnumValueHelper).GetMethod(nameof(EnumToStruct));
             private static readonly MethodInfo enumToClass = typeof(EnumValueHelper).GetMethod(nameof(EnumToClass));
             private static readonly MethodInfo nullEnumToStruct = typeof(EnumValueHelper).GetMethod(nameof(NullEnumToStruct));
@@ -234,8 +244,11 @@ namespace Framework.Data
             private static readonly MethodInfo enumsToClassValues = typeof(EnumValueHelper).GetMethod(nameof(EnumsToClassValues));
             private static readonly MethodInfo nullEnumsToStructValues = typeof(EnumValueHelper).GetMethod(nameof(NullEnumsToStructValues));
             private static readonly MethodInfo nullEnumsToClassValues = typeof(EnumValueHelper).GetMethod(nameof(NullEnumsToClassValues));
+            */
 
-            private static readonly ConcurrentDictionary<Type, EnumHandlerBase> infoCache = new ConcurrentDictionary<Type, EnumHandlerBase>();
+            private static readonly ConcurrentDictionary<Type, EnumHandlerBase> handlers = new ConcurrentDictionary<Type, EnumHandlerBase>();
+
+
 
             private static EnumHandlerBase CreateHandler(Type enumType)
             {
@@ -280,36 +293,36 @@ namespace Framework.Data
                 if (valueType == null) return null;
                 if (enumType.IsDefined(typeof(FlagsAttribute))) throw new NotSupportedException("目前不支援有標示FlagsAttribute的列舉");
 
-                typeof(EnumMapCache<,>).MakeGenericType(enumType, valueType).GetMethod(nameof(EnumMapCache<int, int>.Init)).Invoke(null, new object[] { enums, values, nullEnum });
-                return new Info(enumType, valueType);
+                //建立handler並註冊到Dapper同時回傳
+                var handler = (EnumHandlerBase)typeof(EnumHandler<,>).MakeGenericType(enumType, valueType).GetConstructor(new[] { typeof(IList), typeof(IList), typeof(object) }).Invoke(new object[] { enums, values, nullEnum });
+                Dapper.SqlMapper.AddTypeHandler(enumType, handler);
+                return handler;
+
+                //typeof(EnumMapCache<,>).MakeGenericType(enumType, valueType).GetMethod(nameof(EnumMapCache<int, int>.Init)).Invoke(null, new object[] { enums, values, nullEnum });
+                //return new Info(enumType, valueType);
             }
 
-
-            private static Info GetInfo(Type memberType, out bool isNullable)
+            private static EnumHandlerBase GetHandler(Type memberType, out bool isNullableEnum)
             {
-                isNullable = false;
+                isNullableEnum = false;
                 if (memberType.IsValueType)
                 {
                     var nullType = Nullable.GetUnderlyingType(memberType);
                     var enumType = nullType ?? memberType;
-                    isNullable = nullType != null;
-                    if (enumType.IsEnum) return infoCache.GetOrAdd(enumType, CreateHandler);
+                    isNullableEnum = nullType != null;
+                    if (enumType.IsEnum) return handlers.GetOrAdd(enumType, CreateHandler);
                 }
                 return null;
             }
 
-
             internal static MethodInfo GetValueGetterMethod(Type memberType, out Type valueType)
             {
                 valueType = null;
-                bool isNullable;
-                var info = GetInfo(memberType, out isNullable);
-                if (info == null) return null;
-                valueType = info.ValueType;
-                var method = isNullable ?
-                    (info.IsStructValue() ? nullEnumToStruct : nullEnumToClass) :
-                    (info.IsStructValue() ? enumToStruct : enumToClass);
-                return method.MakeGenericMethod(info.EnumType, info.ValueUnderlyingType);
+                bool isNullableEnum;
+                var handler = GetHandler(memberType, out isNullableEnum);
+                if (handler == null) return null;
+                valueType = handler.ValueType;
+                return isNullableEnum ? handler.nullEnumToValue : handler.enumToValue;
             }
 
 
@@ -319,14 +332,11 @@ namespace Framework.Data
                 var enumerableType = memberType.GetInterfaces().FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IEnumerable<>));
                 if (enumerableType == null) return null;
                 var elemType = enumerableType.GetGenericArguments()[0];
-                bool isNullable;
-                var info = GetInfo(elemType, out isNullable);
-                if (info == null) return null;
-                valueType = info.ValueType;
-                var method = isNullable ?
-                    (info.IsStructValue() ? nullEnumsToStructValues : nullEnumsToClassValues) :
-                    (info.IsStructValue() ? enumsToStructValues : enumsToClassValues);
-                return method.MakeGenericMethod(info.EnumType, info.ValueUnderlyingType);
+                bool isNullableEnum;
+                var handler = GetHandler(elemType, out isNullableEnum);
+                if (handler == null) return null;
+                valueType = handler.ValueType;
+                return isNullableEnum ? handler.nullEnumsToValues : handler.enumsToValues;
             }
 
             /*

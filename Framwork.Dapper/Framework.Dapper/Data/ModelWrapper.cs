@@ -32,12 +32,29 @@ namespace Framework.Data
         {
             if (param is IDynamicParameters) return param;
             var dict = param as IEnumerable<KeyValuePair<string, object>>;
-            if (dict != null) return ParamGeneratorBuilder.WrapDictionaryParam(dict);
+            if (dict != null) return WrapDictionaryParam(dict);
             var paramGeneratorBuilder = new ParamGeneratorBuilder(param.GetType(), commandType, sql, false);
             var paramGenerator = paramGeneratorBuilder.CreateGenerator();
             var models = param as IEnumerable;
             if (models != null && !(param is string || param is IEnumerable<KeyValuePair<string, object>>)) return new EnumerableParamWrapper(models, paramGenerator);
             return new ParamWrapper { Model = param, ParamGenerator = paramGenerator };
         }
+
+        internal static Dictionary<string, object> WrapDictionaryParam(IEnumerable<KeyValuePair<string, object>> dict)
+        {
+            return dict.ToDictionary(n => n.Key, n =>
+            {
+                var value = n.Value;
+                if (value == null) return value;
+                var list = value as IEnumerable;
+                Type valueType;
+                var method =
+                    list == null ? EnumValueHelper.GetValueGetterMethod(value.GetType(), out valueType) :
+                    !(list is string) ? EnumValueHelper.GetValuesGetterMethod(value.GetType(), out valueType) :
+                    null;
+                return method == null ? value : method.Invoke(null, new object[] { value });
+            });
+        }
+
     }
 }

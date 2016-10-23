@@ -535,22 +535,6 @@ namespace Framework.Data
                 }
                 return enumType;
             }
-
-            internal static Dictionary<string, object> WrapDictionaryParam(IEnumerable<KeyValuePair<string, object>> dict)
-            {
-                return dict.ToDictionary(n => n.Key, n =>
-                {
-                    var value = n.Value;
-                    if (value == null) return value;
-                    var list = value as IEnumerable;
-                    Type valueType;
-                    var method =
-                        list == null ? EnumValueHelper.GetValueGetterMethod(value.GetType(), out valueType) :
-                        !(list is string) ? EnumValueHelper.GetValuesGetterMethod(value.GetType(), out valueType) :
-                        null;
-                    return method == null ? value : method.Invoke(null, new object[] { value });
-                });
-            }
         }
     }
 }

@@ -18,7 +18,7 @@ namespace Framework.Data
 {
     partial class ModelWrapper
     {
-        private sealed class ParamGeneratorBuilder
+        internal sealed class ParamGeneratorBuilder
         {
             private Type modelType;
             private CommandType commandType;

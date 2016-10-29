@@ -13,28 +13,8 @@ namespace Framework.Data
     {
         private sealed class DynamicParametersWrapper : SqlMapper.IDynamicParameters
         {
-            private readonly Dapper.DynamicParameters instance = new Dapper.DynamicParameters();
-            private List<object> templates;
-
-            public void AddDynamicParams(object param)
-            {
-                if (param == null) return;
-                var subDynamic = param as DynamicParametersWrapper;
-                if (subDynamic != null)
-                {
-                    if (templates == null) templates = new List<object>();
-                    templates.AddRange(subDynamic.templates);
-                    instance.AddDynamicParams(subDynamic.instance);
-                    return;
-                }
-                var dictionary = param as IEnumerable<KeyValuePair<string, object>>;
-                if (dictionary != null)
-                {
-                    instance.AddDynamicParams(ModelWrapper.WrapDictionaryParam(dictionary));
-                    return;
-                }
-                templates.Add(param);
-            }
+            internal readonly Dapper.DynamicParameters instance = new Dapper.DynamicParameters();
+            internal List<object> templates = null;
 
             public void AddParameters(IDbCommand command, SqlMapper.Identity identity)
             {
@@ -62,8 +42,43 @@ namespace Framework.Data
 
         public void AddDynamicParams(object param)
         {
-            var wrapperDynamic = param as DynamicParameters;
-            wrapper.AddDynamicParams(wrapperDynamic == null ? param : wrapperDynamic.wrapper);
+            if (param == null) return;
+            var subDynamic = param as DynamicParameters;
+            if (subDynamic != null)
+            {
+                if (subDynamic.wrapper.templates != null)
+                {
+                    if (wrapper.templates == null) wrapper.templates = new List<object>();
+                    wrapper.templates.AddRange(subDynamic.wrapper.templates);
+                }
+                wrapper.instance.AddDynamicParams(subDynamic.wrapper.instance);
+                return;
+            }
+            var dictionary = param as IEnumerable<KeyValuePair<string, object>>;
+            if (dictionary != null)
+            {
+                wrapper.instance.AddDynamicParams(ModelWrapper.WrapDictionaryParam(dictionary));
+                return;
+            }
+            if (wrapper.templates == null) wrapper.templates = new List<object>();
+            wrapper.templates.Add(param);
+        }
+
+        public void Add(string name, object value, DbType? dbType, ParameterDirection? direction, int? size)
+        {
+            wrapper.instance.Add(name, value, dbType, direction, size);
+        }
+
+        public void Add(string name, object value = null, DbType? dbType = null, ParameterDirection? direction = null, int? size = null, byte? precision = null, byte? scale = null)
+        {
+            wrapper.instance.Add(name, value, dbType, direction, size, precision, scale);
+        }
+
+        public IEnumerable<string> ParameterNames => wrapper.instance.ParameterNames;
+
+        public T Get<T>(string name)
+        {
+            return wrapper.instance.Get<T>(name);
         }
     }
 }

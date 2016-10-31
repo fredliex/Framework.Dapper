@@ -13,7 +13,7 @@ namespace Framework.Data
 {
     partial class ModelWrapper
     {
-        private static class EnumValueHelper
+        internal static class EnumValueHelper
         {
             private abstract class EnumHandlerBase : Dapper.SqlMapper.ITypeHandler
             {

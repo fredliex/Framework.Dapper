@@ -6,7 +6,6 @@ using Xunit;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections;
-using Dapper;
 using System.Reflection;
 
 namespace Framework.Test
@@ -18,20 +17,26 @@ namespace Framework.Test
             var command = new T();
             command.CommandType = commandType;
             command.CommandText = sql;
+            command.Connection = new SqlConnection();
+
+
             var tmpParam = ModelWrapper.WrapParam(param, CommandType.Text, command.CommandText);
+            var dynamicParameters = tmpParam as DynamicParameters.DynamicParametersWrapper;
+            if (dynamicParameters != null)
+            {
+                dynamicParameters.AddParameters(command);
+                return command;
+            }
+
             var wraper = tmpParam as ModelWrapper.ParamWrapper;
             if (wraper != null)
             {
                 wraper.ParamGenerator(command, param);
+                return command;
             }
-            else
-            {
-                var constructorParamTypes = new[] { typeof(string), typeof(CommandType?), typeof(IDbConnection), typeof(Type), typeof(Type), typeof(Type[]) };
-                var constructorParams = new object[] { sql, commandType, new SqlConnection(), null, tmpParam.GetType(), null };
-                var identity = (SqlMapper.Identity)typeof(SqlMapper.Identity).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, constructorParamTypes, null).Invoke(constructorParams);
-                ((SqlMapper.IDynamicParameters)new DynamicParameters(tmpParam)).AddParameters(command, identity);
-            }
-            return command;
+
+
+            throw new Exception("未處理");
         }
 
         #region 非IModel
@@ -234,7 +239,6 @@ namespace Framework.Test
         [Fact(DisplayName = "字典")]
         public void DictionaryParam()
         {
-            /*
             //一般資料
             var sqlStr = @"select * from tabA col1 = @col1 and col2 = @col2";
             var command = GetCommand<SqlCommand>(sqlStr, new Dictionary<string, object>
@@ -268,12 +272,16 @@ namespace Framework.Test
             command.Parameters
                 .Verify("col1", "aa", DbType.String, 4000)
                 .Verify("col2", "bb", DbType.String, 4000);
-            */
 
-            //DynamicParameters
-            var param = new DynamicParameters(new { col = new[] { StringEnum.A, StringEnum.B } });
-            //var param = new DynamicParameters(new { col = "A" });
-             var command = GetCommand<SqlCommand>("select * from tabA col in @col", param);
+            //DynamicParameters 
+            var param = new DynamicParameters(new { col = StringEnum.A });
+            command = GetCommand<SqlCommand>("select * from tabA col = @col", param);
+            Assert.Equal(1, command.Parameters.Count);
+            command.Parameters.Verify("col", "aa", DbType.String, 4000);
+
+            //DynamicParameters Enumerable
+            param = new DynamicParameters(new { col = new[] { StringEnum.A, StringEnum.B } });
+            command = GetCommand<SqlCommand>("select * from tabA col in @col", param);
             Assert.Equal("select * from tabA col in (@col1,@col2)", command.CommandText);
             Assert.Equal(2, command.Parameters.Count);
             command.Parameters

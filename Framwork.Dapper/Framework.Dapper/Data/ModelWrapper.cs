@@ -31,8 +31,11 @@ namespace Framework.Data
         internal static object WrapParam(object param, CommandType commandType, string sql)
         {
             if (param is IDynamicParameters) return param;
+            var dynamicParameters = param as DynamicParameters;
+            if (dynamicParameters != null) return dynamicParameters.Wrapper;
             var dict = param as IEnumerable<KeyValuePair<string, object>>;
-            if (dict != null) return WrapDictionaryParam(dict);
+            if (dict != null) return new DynamicParameters(dict).Wrapper;
+            //if (dict != null) return WrapDictionaryParam(dict);
             var paramGeneratorBuilder = new ParamGeneratorBuilder(param.GetType(), commandType, sql, false);
             var paramGenerator = paramGeneratorBuilder.CreateGenerator();
             var models = param as IEnumerable;
@@ -40,6 +43,7 @@ namespace Framework.Data
             return new ParamWrapper { Model = param, ParamGenerator = paramGenerator };
         }
 
+        /*
         internal static Dictionary<string, object> WrapDictionaryParam(IEnumerable<KeyValuePair<string, object>> dict)
         {
             return dict.ToDictionary(n => n.Key, n =>
@@ -55,6 +59,7 @@ namespace Framework.Data
                 return method == null ? value : method.Invoke(null, new object[] { value });
             });
         }
+        */
 
     }
 }

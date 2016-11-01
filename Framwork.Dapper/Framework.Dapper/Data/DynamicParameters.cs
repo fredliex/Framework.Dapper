@@ -32,7 +32,7 @@ namespace Framework.Data
                 ((SqlMapper.IDynamicParameters)Instance).AddParameters(command, identity);
             }
 
-#if DEBUG
+#if DEBUG  //測試用而已
             public void AddParameters(IDbCommand command)
             {
                 var constructorParamTypes = new[] { typeof(string), typeof(CommandType?), typeof(IDbConnection), typeof(Type), typeof(Type), typeof(Type[]) };

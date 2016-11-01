@@ -59,7 +59,6 @@ namespace Framework.Data
                     InternalHelper.WrapField(typeof(SqlMapper), "LinqBinary", out LinqBinary);
                     InternalHelper.WrapMethod(typeof(SqlMapper), "EmitInt32", out EmitInt32);
                     InternalHelper.WrapMethod(typeof(SqlMapper), "GetToString", out GetToString);
-
                     InternalHelper.WrapField(typeof(global::Dapper.DynamicParameters), "EnumerableMultiParameter", out EnumerableMultiParameter);
                 }
 

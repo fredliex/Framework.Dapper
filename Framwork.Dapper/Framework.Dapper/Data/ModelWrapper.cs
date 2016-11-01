@@ -31,35 +31,22 @@ namespace Framework.Data
         internal static object WrapParam(object param, CommandType commandType, string sql)
         {
             if (param is IDynamicParameters) return param;
+
+            //DynamicParameters的話就回wrapper
             var dynamicParameters = param as DynamicParameters;
             if (dynamicParameters != null) return dynamicParameters.Wrapper;
+
+            //Dictionary<string, object>的話丟給DynamicParameters處理
             var dict = param as IEnumerable<KeyValuePair<string, object>>;
             if (dict != null) return new DynamicParameters(dict).Wrapper;
-            //if (dict != null) return WrapDictionaryParam(dict);
+
+            //由ParamWrapper處理
             var paramGeneratorBuilder = new ParamGeneratorBuilder(param.GetType(), commandType, sql, false);
             var paramGenerator = paramGeneratorBuilder.CreateGenerator();
             var models = param as IEnumerable;
             if (models != null && !(param is string || param is IEnumerable<KeyValuePair<string, object>>)) return new EnumerableParamWrapper(models, paramGenerator);
             return new ParamWrapper { Model = param, ParamGenerator = paramGenerator };
         }
-
-        /*
-        internal static Dictionary<string, object> WrapDictionaryParam(IEnumerable<KeyValuePair<string, object>> dict)
-        {
-            return dict.ToDictionary(n => n.Key, n =>
-            {
-                var value = n.Value;
-                if (value == null) return value;
-                var list = value as IEnumerable;
-                Type valueType;
-                var method =
-                    list == null ? EnumValueHelper.GetValueGetterMethod(value.GetType(), out valueType) :
-                    !(list is string) ? EnumValueHelper.GetValuesGetterMethod(value.GetType(), out valueType) :
-                    null;
-                return method == null ? value : method.Invoke(null, new object[] { value });
-            });
-        }
-        */
-
+        
     }
 }

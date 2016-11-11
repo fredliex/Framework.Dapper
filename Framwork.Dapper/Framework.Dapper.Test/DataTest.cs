@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Collections;
 using System.Reflection;
+using System.Threading;
+using System.Diagnostics;
 
 namespace Framework.Test
 {
@@ -234,6 +236,10 @@ namespace Framework.Test
                 .Verify("col3", "cc", DbType.String, 4000);
         }
         #endregion
+
+        private static Hashtable a = new Hashtable();
+        private static Hashtable b = a;
+
 
         #region 
         [Fact(DisplayName = "字典")]

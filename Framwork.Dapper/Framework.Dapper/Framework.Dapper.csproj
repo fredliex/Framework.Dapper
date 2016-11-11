@@ -53,6 +53,9 @@
     <Compile Include="Data\IModel.cs" />
     <Compile Include="Data\InternalHelper.cs" />
     <Compile Include="Data\ModelWrapper.cs" />
+    <Compile Include="Data\ModelWrapper.DeserializerBuilder.cs">
+      <DependentUpon>ModelWrapper.cs</DependentUpon>
+    </Compile>
     <Compile Include="Data\ModelWrapper.EnumerableParamWrapper.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>

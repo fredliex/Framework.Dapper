@@ -41,6 +41,16 @@ namespace Framework.Data
             lambda = Expression.Lambda<T>(body, isStatic ? parmeters : new[] { instance }.Concat(parmeters)).Compile();
         }
 
+        internal static void WrapConstructor<T>(Type type, out T lambda)
+        {
+            var parmeterTypes = typeof(T).GetGenericArguments();
+            parmeterTypes = parmeterTypes.Take(parmeterTypes.Length - 1).ToArray();
+            var constructor = type.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, parmeterTypes, null);
+            var parmeters = parmeterTypes.Select((p, i) => Expression.Parameter(p, "p" + i)).ToArray();
+            var body = Expression.New(constructor, parmeters);
+            lambda = Expression.Lambda<T>(body, parmeters).Compile();
+        }
+
         internal static void EmitConstant(this ILGenerator il, object value, Type type = null)
         {
             funcEmitConstant(il, value, type);

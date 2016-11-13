@@ -9,6 +9,7 @@ using System.Collections;
 using System.Reflection;
 using System.Threading;
 using System.Diagnostics;
+using static Framework.Data.ModelWrapper;
 
 namespace Framework.Test
 {
@@ -295,5 +296,17 @@ namespace Framework.Test
                 .Verify("col2", "bb", DbType.String, 4000);
         }
         #endregion
+
+        [Fact(DisplayName = "aaaa")]
+        public void aaaaa()
+        {
+            var typeCaches = Type.GetType("Dapper.SqlMapper, Dapper").GetNestedType("TypeDeserializerCache", BindingFlags.NonPublic);
+            var caches = typeCaches.GetField("byType", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+
+            using (var conn = DbHelper.OpenConnection("test.local"))
+            {
+                var aa = conn.Query<NullMappingModel>("select '1' as strCol").ToList();
+            }
+        }
     }
 }

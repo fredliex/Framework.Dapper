@@ -15,6 +15,7 @@ namespace Framework.Data
 {
     partial class ModelWrapper
     {
+        //http://stackoverflow.com/questions/7299097/dynamically-replace-the-contents-of-a-c-sharp-method#comment64907608_36415711
 
         internal static class DapperInjector
         {

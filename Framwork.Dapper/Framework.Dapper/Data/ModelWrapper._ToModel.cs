@@ -8,5 +8,6 @@ namespace Framework.Data
 {
     partial class ModelWrapper
     {
+
     }
 }

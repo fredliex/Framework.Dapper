@@ -45,9 +45,9 @@ namespace Framework.Data
                 internal static readonly Regex smellsLikeOleDb;
                 internal static readonly Regex literalTokens;
                 internal static readonly string LinqBinary;
-
                 internal static readonly Action<ILGenerator, int> EmitInt32;
                 internal static readonly Func<TypeCode, MethodInfo> GetToString;
+                internal static readonly Func<Type, bool> HasTypeHandler;
                 //Dapper.DynamicParameters
                 internal static readonly DbType EnumerableMultiParameter;
 
@@ -59,6 +59,8 @@ namespace Framework.Data
                     InternalHelper.WrapField(typeof(SqlMapper), "LinqBinary", out LinqBinary);
                     InternalHelper.WrapMethod(typeof(SqlMapper), "EmitInt32", out EmitInt32);
                     InternalHelper.WrapMethod(typeof(SqlMapper), "GetToString", out GetToString);
+                    InternalHelper.WrapMethod(typeof(SqlMapper), "HasTypeHandler", out HasTypeHandler);
+
                     InternalHelper.WrapField(typeof(global::Dapper.DynamicParameters), "EnumerableMultiParameter", out EnumerableMultiParameter);
                 }
 

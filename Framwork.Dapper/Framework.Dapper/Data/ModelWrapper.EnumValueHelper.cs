@@ -339,6 +339,8 @@ namespace Framework.Data
                 return isNullableEnum ? handler.nullEnumsToValues : handler.enumsToValues;
             }
 
+            
+
             /*
             #region 單個
             public static TValue EnumToClass<TEnum, TValue>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where TValue : class

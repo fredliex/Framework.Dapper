@@ -30,7 +30,7 @@ namespace Framework.Data
 
         internal static object WrapParam(object param, CommandType commandType, string sql)
         {
-            if (param is IDynamicParameters) return param;
+            if (param == null || param is IDynamicParameters) return param;
 
             //DynamicParameters的話就回wrapper
             var dynamicParameters = param as DynamicParameters;

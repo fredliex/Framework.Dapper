@@ -10,6 +10,7 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using static Dapper.SqlMapper;
 
 namespace Framework.Data
 {
@@ -129,10 +130,106 @@ namespace Framework.Data
 
         internal sealed class DeserializerBuilder
         {
-            internal static void Register(Type modelType)
+            sealed class TypeMapp : SqlMapper.ITypeMap
             {
-                DapperInjector.GetCache(modelType);
+                public ConstructorInfo FindConstructor(string[] names, Type[] types)
+                {
+                    throw new NotImplementedException();
+                }
+
+                public ConstructorInfo FindExplicitConstructor()
+                {
+                    return null;
+                }
+
+                public IMemberMap GetConstructorParameter(ConstructorInfo constructor, string columnName)
+                {
+                    throw new NotImplementedException();
+                }
+
+                public IMemberMap GetMember(string columnName)
+                {
+                    throw new NotImplementedException();
+                }
             }
+
+            public Func<IDataReader, object> GetTypeDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)
+            {
+                return null;
+
+                var returnType = type.IsValueType ? typeof(object) : type;
+                var dm = new DynamicMethod("Deserialize" + Guid.NewGuid().ToString(), returnType, new[] { typeof(IDataReader) }, type, true);
+
+                var il = dm.GetILGenerator();
+                il.DeclareLocal(typeof(int));
+                il.DeclareLocal(type);
+                il.Emit(OpCodes.Ldc_I4_0);
+                il.Emit(OpCodes.Stloc_0);
+
+                if (length == -1) length = reader.FieldCount - startBound;
+                if (reader.FieldCount <= startBound)
+                {
+                    bool hasFields = false;
+                    try { hasFields = reader?.FieldCount != 0; } catch { }
+                    throw hasFields ? 
+                        new ArgumentException("When using the multi-mapping APIs ensure you set the splitOn param if you have keys other than Id", "splitOn") :
+                        (Exception)new InvalidOperationException("No columns were selected");
+                }
+
+                var names = Enumerable.Range(startBound, length).Select(i => reader.GetName(i)).ToArray();
+
+                //ITypeMap typeMap = GetTypeMap(type);
+
+                int index = startBound;
+
+                ConstructorInfo specializedConstructor = null;
+
+                bool supportInitialize = false;
+                Dictionary<Type, LocalBuilder> structLocals = null; //存放已定義的區域變數
+
+                if (type.IsValueType)
+                {
+                    il.Emit(OpCodes.Ldloca_S, (byte)1);
+                    il.Emit(OpCodes.Initobj, type);
+                }
+                else
+                {
+                    var types = new Type[length];
+                    for(var i = 0; i < length; i++) types[i] = reader.GetFieldType(startBound + i);
+                    //尋找名稱與型別相符的建構式
+                    var ctor = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(n => n.IsPublic ? 0 : n.IsPrivate ? 2 : 1).FirstOrDefault(ctor =>
+                    {
+                        var ctorParameters = ctor.GetParameters();
+                        if (ctorParameters.Length == 0 || ctorParameters.Length != types.Length) return false;
+                        for (var i = 0; i < ctorParameters.Length; i++)
+                        {
+                            if (!String.Equals(ctorParameters[i].Name, names[i], StringComparison.OrdinalIgnoreCase)) return false;
+                            var fieldType = types[i];
+                            var unboxedType = ctorParameters[i].ParameterType;
+                            unboxedType = Nullable.GetUnderlyingType(unboxedType) ?? unboxedType;
+                            if (fieldType == typeof(byte[]) && unboxedType.FullName == Reflect.Dapper.LinqBinary) continue;
+                            if (fieldType == unboxedType) continue;
+                            if (Reflect.Dapper.HasTypeHandler(unboxedType)) continue;
+                            if (unboxedType == typeof(char) && fieldType == typeof(string)) continue;
+
+
+                            if (unboxedType.IsEnum && (fieldType == typeof(string) || Enum.GetUnderlyingType(unboxedType) == fieldType)) continue;
+                            EnumValueHelper.GetValueGetterMethod
+                            return false;
+                        }
+                        return true;
+                    });
+
+                }
+
+
+
+
+            }
+
+
+
+
 
         }
     }

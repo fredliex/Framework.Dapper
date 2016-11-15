@@ -38,8 +38,12 @@ namespace Framework.Data
 
         public static IEnumerable<T> Query<T>(this IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null, bool buffered = true, int? commandTimeout = null, CommandType? commandType = null)
         {
-            ModelWrapper.DeserializerBuilder.Register(typeof(T));
-            return SqlMapper.Query<T>(conn, sql, param, transaction, buffered, commandTimeout, commandType);
+            var paramWrapper = ModelWrapper.WrapParam(param, commandType ?? CommandType.Text, sql);
+            var commandDefinition = new CommandDefinition(sql, paramWrapper, transaction, commandTimeout, commandType, CommandFlags.Buffered);
+            var reader = SqlMapper.ExecuteReader(conn, commandDefinition, CommandBehavior.SequentialAccess | CommandBehavior.SingleResult);
+            //reader
+            return null;
+
         }
     }
 }

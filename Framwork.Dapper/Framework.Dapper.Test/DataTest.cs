@@ -300,6 +300,13 @@ namespace Framework.Test
         [Fact(DisplayName = "aaaa")]
         public void aaaaa()
         {
+            var aaa = new[] { 0, 1, 2, 3, 4, 5, 6 };
+            var types = new int[5];
+            for (var i = 0; i < types.Length; i++) { types[i] = aaa[i]; }
+
+
+
+            return;
             var typeCaches = Type.GetType("Dapper.SqlMapper, Dapper").GetNestedType("TypeDeserializerCache", BindingFlags.NonPublic);
             var caches = typeCaches.GetField("byType", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
 

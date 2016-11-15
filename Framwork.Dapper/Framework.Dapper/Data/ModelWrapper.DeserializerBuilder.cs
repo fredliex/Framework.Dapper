@@ -211,10 +211,12 @@ namespace Framework.Data
                             if (fieldType == unboxedType) continue;
                             if (Reflect.Dapper.HasTypeHandler(unboxedType)) continue;
                             if (unboxedType == typeof(char) && fieldType == typeof(string)) continue;
-
-
-                            if (unboxedType.IsEnum && (fieldType == typeof(string) || Enum.GetUnderlyingType(unboxedType) == fieldType)) continue;
-                            EnumValueHelper.GetValueGetterMethod
+                            if (unboxedType.IsEnum)
+                            {
+                                if (fieldType == EnumValueHelper.GetValueUnderlyingType(unboxedType)) continue;
+                                if (Enum.GetUnderlyingType(unboxedType) == fieldType) continue;
+                                if (fieldType == typeof(string)) continue;
+                            }
                             return false;
                         }
                         return true;

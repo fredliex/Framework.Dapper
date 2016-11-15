@@ -315,6 +315,10 @@ namespace Framework.Data
                 return null;
             }
 
+            /// <summary>取得 Enum 或 Enum? 轉成 Value 的MethodInfo。</summary>
+            /// <param name="memberType"></param>
+            /// <param name="valueType"></param>
+            /// <returns>如果未設定ValueAttribute則回傳null。</returns>
             internal static MethodInfo GetValueGetterMethod(Type memberType, out Type valueType)
             {
                 valueType = null;
@@ -326,6 +330,10 @@ namespace Framework.Data
             }
 
 
+            /// <summary>取得 IEnumerable&lt;Enum&gt; 或 IEnumerable&lt;Enum?&gt; 轉成 IEnumerable&lt;Value&gt; 的MethodInfo。</summary>
+            /// <param name="memberType"></param>
+            /// <param name="valueType"></param>
+            /// <returns>如果未設定ValueAttribute則回傳null。</returns>
             internal static MethodInfo GetValuesGetterMethod(Type memberType, out Type valueType)
             {
                 valueType = null;
@@ -337,6 +345,16 @@ namespace Framework.Data
                 if (handler == null) return null;
                 valueType = handler.ValueType;
                 return isNullableEnum ? handler.nullEnumsToValues : handler.enumsToValues;
+            }
+
+            /// <summary>取得Enum對應Value的基礎型別。</summary>
+            /// <param name="enumType"></param>
+            /// <returns>如果未設定ValueAttribute則回傳null。</returns>
+            internal static Type GetValueUnderlyingType(Type enumType)
+            {
+                bool isNullableEnum;
+                var handler = GetHandler(enumType, out isNullableEnum);
+                return handler?.ValueUnderlyingType;
             }
 
             

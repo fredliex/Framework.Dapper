@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
@@ -197,36 +198,69 @@ namespace Framework.Data
                     var types = new Type[length];
                     for(var i = 0; i < length; i++) types[i] = reader.GetFieldType(startBound + i);
                     //尋找名稱與型別相符的建構式
-                    var ctor = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(n => n.IsPublic ? 0 : n.IsPrivate ? 2 : 1).FirstOrDefault(ctor =>
-                    {
-                        var ctorParameters = ctor.GetParameters();
-                        if (ctorParameters.Length == 0 || ctorParameters.Length != types.Length) return false;
-                        for (var i = 0; i < ctorParameters.Length; i++)
-                        {
-                            if (!String.Equals(ctorParameters[i].Name, names[i], StringComparison.OrdinalIgnoreCase)) return false;
-                            var fieldType = types[i];
-                            var unboxedType = ctorParameters[i].ParameterType;
-                            unboxedType = Nullable.GetUnderlyingType(unboxedType) ?? unboxedType;
-                            if (fieldType == typeof(byte[]) && unboxedType.FullName == Reflect.Dapper.LinqBinary) continue;
-                            if (fieldType == unboxedType) continue;
-                            if (Reflect.Dapper.HasTypeHandler(unboxedType)) continue;
-                            if (unboxedType == typeof(char) && fieldType == typeof(string)) continue;
-                            if (unboxedType.IsEnum)
+                    var ctor = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                        .OrderBy(c => c.IsPublic ? 0 : (c.IsPrivate ? 2 : 1)).ThenBy(c => c.GetParameters().Length)
+                        .FirstOrDefault(c => {
+                            var ctorParameters = c.GetParameters();
+                            if (ctorParameters.Length == 0) return true;
+                            if (ctorParameters.Length != types.Length) return false;
+                            for (var i = 0; i < ctorParameters.Length; i++)
                             {
-                                if (fieldType == EnumValueHelper.GetValueUnderlyingType(unboxedType)) continue;
-                                if (Enum.GetUnderlyingType(unboxedType) == fieldType) continue;
-                                if (fieldType == typeof(string)) continue;
+                                if (!String.Equals(ctorParameters[i].Name, names[i], StringComparison.OrdinalIgnoreCase)) return false;
+                                var fieldType = types[i];
+                                var unboxedType = ctorParameters[i].ParameterType;
+                                if (fieldType == typeof(byte[]) && unboxedType.FullName == Reflect.Dapper.LinqBinary) return true;
+                                unboxedType = Nullable.GetUnderlyingType(unboxedType) ?? unboxedType;
+                                if (fieldType == unboxedType) continue;
+                                if (Reflect.Dapper.HasTypeHandler(unboxedType)) continue;
+                                if (unboxedType == typeof(char) && fieldType == typeof(string)) continue;
+                                if (unboxedType.IsEnum)
+                                {
+                                    if (fieldType == EnumValueHelper.GetValueUnderlyingType(unboxedType)) continue;
+                                    if (Enum.GetUnderlyingType(unboxedType) == fieldType) continue;
+                                    if (fieldType == typeof(string)) continue;
+                                }
+                                return false;
                             }
-                            return false;
+                            return true;
+                        });
+                    if (ctor == null)
+                    {
+                        string proposedTypes = "(" + string.Join(", ", types.Select((t, i) => t.FullName + " " + names[i]).ToArray()) + ")";
+                        throw new InvalidOperationException($"A parameterless default constructor or one matching signature {proposedTypes} is required for {type.FullName} materialization");
+                    }
+
+                    if (ctor.GetParameters().Length == 0)
+                    {
+                        il.Emit(OpCodes.Newobj, ctor);
+                        il.Emit(OpCodes.Stloc_1);
+
+                        supportInitialize = typeof(ISupportInitialize).IsAssignableFrom(type);
+                        if (supportInitialize)
+                        {
+                            il.Emit(OpCodes.Ldloc_1);
+                            il.EmitCall(OpCodes.Callvirt, typeof(ISupportInitialize).GetMethod(nameof(ISupportInitialize.BeginInit)), null);
                         }
-                        return true;
-                    });
+                    }
+                    else
+                    {
+                        specializedConstructor = ctor;
+                    }
+
+                    il.BeginExceptionBlock();
+                    if (type.IsValueType)
+                    {
+                        il.Emit(OpCodes.Ldloca_S, (byte)1);// [target]
+                    }
+                    else if (specializedConstructor == null)
+                    {
+                        il.Emit(OpCodes.Ldloc_1);// [target]
+                    }
+
+
+
 
                 }
-
-
-
-
             }
 
 

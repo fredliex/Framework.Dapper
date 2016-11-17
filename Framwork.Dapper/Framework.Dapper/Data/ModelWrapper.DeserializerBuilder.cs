@@ -235,6 +235,7 @@ namespace Framework.Data
                         il.Emit(OpCodes.Newobj, ctor);
                         il.Emit(OpCodes.Stloc_1);
 
+                        //如果有繼承ISupportInitialize的話, 呼叫ISupportInitialize.BeginInit
                         supportInitialize = typeof(ISupportInitialize).IsAssignableFrom(type);
                         if (supportInitialize)
                         {
@@ -257,6 +258,37 @@ namespace Framework.Data
                         il.Emit(OpCodes.Ldloc_1);// [target]
                     }
 
+                    /*
+                     * if (是DBNull) {
+                     *    if (有EnumValue且有NullValue) {                 01.    value = EnumValue.NullValue;
+                     *    } else                                          02.    value = default(memberType)
+                     * } else {
+                     *    
+                     * }
+                     * 
+                     * 
+                     * 
+                     */
+
+                    /* 
+                     * if(value is DBNull) {
+                     *      替換stack。若memberType是有對應的enum, 則替換成DBNull所對應的enum；否則替換成default(memberType)。
+                     * } else {
+                     *      if(IsTrimRight && dbType == string) value = value.TrimEnd();
+                     *      if(dbValue == NullValue) {
+                     *          將stack替換成default(memberType)
+                     *      } else {
+                     *          var targetType = memberType;
+                     *          if(member的型態是有對應的Enum) targetType = enumValueType;
+                     *          將stack上的value轉型到targetType
+                     *          if(member的型態是有對應的Enum) 將stack替換成對應的Enum;
+                     *      }
+                     * }
+                     * if(屬性建立的話) 設屬性值
+                     * 
+                     * 依照上述規則巡迴所有member之後...
+                     * if(建構建立的話) ctor(...)
+                     */
 
 
 

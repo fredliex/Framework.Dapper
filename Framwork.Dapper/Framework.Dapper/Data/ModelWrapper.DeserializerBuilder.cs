@@ -258,12 +258,65 @@ namespace Framework.Data
                         il.Emit(OpCodes.Ldloc_1);// [target]
                     }
 
-                    /*
-                     * if (是DBNull) {
-                     *    if (有EnumValue且有NullValue) {                 01.    value = EnumValue.NullValue;
-                     *    } else                                          02.    value = default(memberType)
-                     * } else {
+
+
+                    /* 
+                     *                                                                                      01.     if (value == DBNull.Value) goto isDbNullLabel:
+                     * if (colType == string && member has ColumnAttribute.IsTrimRight)                             value = value.TrimEnd();
+                     * if (member has ColumnAttribute.NullMapping)                                                  if (value == ColumnAttribute.NullMapping) goto isDbNullLabel:
+                     * if (memberType is Guid?) {                                                                   value = SqlMapper.ReadGuid/ReadNullableGuid(value);
+                     * } else if (memberType is char?) {                                                            value = SqlMapper.ReadChar/ReadNullableChar(value);
+                     * } else if (memberType is System.Data.Linq.Binary) {                                          value = new System.Data.Linq.Binary(value);
+                     * } else if (memberType is Enum?) {
+                     *    if (memberType has ValueAttrubite) {                                                      value = fromValueToEnum(value);
+                     *    } else {                                                                                  value = (memberType)(Enum基礎型別)value;
+                     *    }
+                     * }
+                     * 
+                     * 
+                     * 
+                     * 
+                     * if (memberType is System.Data.Linq.Binary)                                                   value = new System.Data.Linq.Binary(value);
+                     *    if (colType == string) {                                                                  value = Guid.Parse(value)
+                     *    } else {                                                                                  value = new Guid((byte[])value)
+                     *    }
+                     * }
                      *    
+                     *    
+                     *    if (memberType is Enum) {
+                     *       if (memberType has ValueAttrubite) {                                                   value = fromValueToEnum(value);
+                     *       else {                                                                                 value = (memberType)(Enum基礎型別)value;
+                     *       }
+                     *    }
+                     *    if (memberType has ValueAttrubite) {                                                      value = fromValueToEnum(value);
+                     *    } else if (memberType != string && memberType has Parse method)                           value = memberType.Parse(value);
+                     *    }
+                     * } else {
+                     *    if ()
+                     * }
+                     * if (memberType is System.Data.Linq.Binary)                                                   value = new System.Data.Linq.Binary(value);
+                     * 
+                     * 
+                     *                                                                                      09. isDbNullLabel:
+                     *                                                                                      02.     value = null; 
+                     *                                                                                              
+                     *                                                                                      value = null;
+                     *                                                                                      
+                     *                                                                                      
+                     * 
+                     * 
+                     * 
+                     * 
+                     * if (col is DBNull) {
+                     *    if (member's type has ValueAttrubite && has EnumValue.NullValue) {                01.    value = EnumValue.NullValue;
+                     *    } else                                                                            02.    value = default(memberType);
+                     *    }
+                     * } else {
+                     *    if (col is string && member has IsTrimRight)                                      03.    value.TrimEnd();
+                     *    if (col has define ColumnAtrribute.NullMapping) {                                 04.    if (value == ColumnAtrribute.NullMapping) value = null;
+                     *    } else {
+                     *    
+                     *    }
                      * }
                      * 
                      * 

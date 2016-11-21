@@ -196,11 +196,12 @@ namespace Framework.Data
                 else
                 {
                     var types = new Type[length];
-                    for(var i = 0; i < length; i++) types[i] = reader.GetFieldType(startBound + i);
+                    for (var i = 0; i < length; i++) types[i] = reader.GetFieldType(startBound + i);
                     //尋找名稱與型別相符的建構式
                     var ctor = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                         .OrderBy(c => c.IsPublic ? 0 : (c.IsPrivate ? 2 : 1)).ThenBy(c => c.GetParameters().Length)
-                        .FirstOrDefault(c => {
+                        .FirstOrDefault(c =>
+                        {
                             var ctorParameters = c.GetParameters();
                             if (ctorParameters.Length == 0) return true;
                             if (ctorParameters.Length != types.Length) return false;
@@ -258,100 +259,77 @@ namespace Framework.Data
                         il.Emit(OpCodes.Ldloc_1);// [target]
                     }
 
+                    //建立空的型別而已
+                    var members = Enumerable.Empty<ColumnInfo>().Select(n => new { n.ValueType, isConstructor = false });
+                    if (specializedConstructor == null)
+                    {
+                        var table = GetTableInfo(type);
+                        members = names.Select(table.GetColumn).Select(n => n == null ? null : new { n.ValueType, isConstructor = false });
+                    }
+                    else
+                    {
+                        var parameters = specializedConstructor.GetParameters();
+                        members = names
+                            .Select(n => parameters.FirstOrDefault(p => string.Equals(p.Name, n, StringComparison.OrdinalIgnoreCase)))
+                            .Select(n => n == null ? null : new { ValueType = n.ParameterType, isConstructor = true });
+                    }
 
+                    bool first = true;
+                    var allDone = il.DefineLabel();
+                    int enumDeclareLocal = -1, valueCopyLocal = il.DeclareLocal(typeof(object)).LocalIndex;
 
                     /* 
                      *                                                                                      01.     if (value == DBNull.Value) goto isDbNullLabel:
-                     * if (colType == string && member has ColumnAttribute.IsTrimRight)                             value = value.TrimEnd();
-                     * if (member has ColumnAttribute.NullMapping)                                                  if (value == ColumnAttribute.NullMapping) goto isDbNullLabel:
-                     * if (memberType is Guid?) {                                                                   value = SqlMapper.ReadGuid/ReadNullableGuid(value);
-                     * } else if (memberType is char?) {                                                            value = SqlMapper.ReadChar/ReadNullableChar(value);
-                     * } else if (memberType is System.Data.Linq.Binary) {                                          value = new System.Data.Linq.Binary(value);
-                     * } else if (memberType is Enum?) {
-                     *    if (memberType has ValueAttrubite) {                                                      value = fromValueToEnum(value);
-                     *    } else {                                                                                  value = (memberType)(Enum基礎型別)value;
+                     * if (colType == string && member has ColumnAttribute.IsTrimRight)                     02.     value = value.TrimEnd()
+                     * if (member has NullMapping)                                                          03.     if (value == NullMapping) goto isDbNullLabel:
+                     * if (memberType is char or char?) {                                                   04.     value = ReadChar(value)
+                     * } else if (memberType is Guid or Guid?) {                                            05.     value = ReadGuid(value)
+                     * } else if (memberType is Enum or Enum?) {
+                     *    if (memberType has EnumValue) {                                                   06.     value = getEnumFromValue(value)
+                     *    } else if (colType == string) {                                                   07.     value = Enum.Parse(enumType, value, true)
+                     *    } else {                                                                          08.     value = (enumType)(Enum基礎型別)value
                      *    }
-                     * }
-                     * 
-                     * 
-                     * 
-                     * 
-                     * if (memberType is System.Data.Linq.Binary)                                                   value = new System.Data.Linq.Binary(value);
-                     *    if (colType == string) {                                                                  value = Guid.Parse(value)
-                     *    } else {                                                                                  value = new Guid((byte[])value)
-                     *    }
-                     * }
-                     *    
-                     *    
-                     *    if (memberType is Enum) {
-                     *       if (memberType has ValueAttrubite) {                                                   value = fromValueToEnum(value);
-                     *       else {                                                                                 value = (memberType)(Enum基礎型別)value;
-                     *       }
-                     *    }
-                     *    if (memberType has ValueAttrubite) {                                                      value = fromValueToEnum(value);
-                     *    } else if (memberType != string && memberType has Parse method)                           value = memberType.Parse(value);
-                     *    }
+                     * } else if (memberType is System.Data.Linq.Binary) {                                  09.     value = new System.Data.Linq.Binary(value)
+                     * } else if (memberType 有handler) {                                                   10.     value = SqlMapper.TypeHandlerCache<T>.Parse(value)
+                     * } else if (型別一致) {                                                               11.     value = (memberType)value
                      * } else {
-                     *    if ()
+                     *                                                                                      12.     呼叫SqlMapper.FlexibleConvertBoxedFromHeadOfStack來轉型, 創建
                      * }
-                     * if (memberType is System.Data.Linq.Binary)                                                   value = new System.Data.Linq.Binary(value);
-                     * 
-                     * 
-                     *                                                                                      09. isDbNullLabel:
-                     *                                                                                      02.     value = null; 
-                     *                                                                                              
-                     *                                                                                      value = null;
-                     *                                                                                      
-                     *                                                                                      
-                     * 
-                     * 
-                     * 
-                     * 
-                     * if (col is DBNull) {
-                     *    if (member's type has ValueAttrubite && has EnumValue.NullValue) {                01.    value = EnumValue.NullValue;
-                     *    } else                                                                            02.    value = default(memberType);
-                     *    }
-                     * } else {
-                     *    if (col is string && member has IsTrimRight)                                      03.    value.TrimEnd();
-                     *    if (col has define ColumnAtrribute.NullMapping) {                                 04.    if (value == ColumnAtrribute.NullMapping) value = null;
-                     *    } else {
-                     *    
-                     *    }
+                     * if (memberType is Nullable<>)                                                        13.     value = new Nullable<T>(value)
+                     *                                                                                      14.     goto finishLabel:
+                     *                                                                                      15. isDbNullLabel:
+                     * if (memberType is Enum? && memberType has EnumValue.NullValue) {                     16.     value = EnumValue.NullValue
+                     * } else {                                                                             17.     value = null
                      * }
-                     * 
-                     * 
-                     * 
+                     *                                                                                      18. finishLabel:
                      */
 
-                    /* 
-                     * if(value is DBNull) {
-                     *      替換stack。若memberType是有對應的enum, 則替換成DBNull所對應的enum；否則替換成default(memberType)。
-                     * } else {
-                     *      if(IsTrimRight && dbType == string) value = value.TrimEnd();
-                     *      if(dbValue == NullValue) {
-                     *          將stack替換成default(memberType)
-                     *      } else {
-                     *          var targetType = memberType;
-                     *          if(member的型態是有對應的Enum) targetType = enumValueType;
-                     *          將stack上的value轉型到targetType
-                     *          if(member的型態是有對應的Enum) 將stack替換成對應的Enum;
-                     *      }
-                     * }
-                     * if(屬性建立的話) 設屬性值
-                     * 
-                     * 依照上述規則巡迴所有member之後...
-                     * if(建構建立的話) ctor(...)
-                     */
+                    foreach (var item in members)
+                    {
+                        if (item != null)
+                        {
+                            if (specializedConstructor == null) il.Emit(OpCodes.Dup); // stack is now [target][target]
+                            Label isDbNullLabel = il.DefineLabel();
+                            Label finishLabel = il.DefineLabel();
+                            il.Emit(OpCodes.Ldarg_0); // stack is now [target][target][reader]
+                            Reflect.Dapper.EmitInt32(il, index); // stack is now [target][target][reader][index]
+                            il.Emit(OpCodes.Dup);// stack is now [target][target][reader][index][index]
+                            il.Emit(OpCodes.Stloc_0);// stack is now [target][target][reader][index]
+                            il.Emit(OpCodes.Callvirt, getItem); // stack is now [target][target][value-as-object]
+                            il.Emit(OpCodes.Dup); // stack is now [target][target][value-as-object][value-as-object]
+                            StoreLocal(il, valueCopyLocal);
+                            Type colType = reader.GetFieldType(index);
+                            Type memberType = item.MemberType;
 
 
+
+                        }
+                        first = false;
+                        index += 1;
+                    }
 
                 }
             }
-
-
-
-
-
         }
     }
 }

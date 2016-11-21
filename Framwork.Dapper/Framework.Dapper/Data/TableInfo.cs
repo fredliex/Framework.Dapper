@@ -58,7 +58,7 @@ namespace Framework.Data
         {
             Columns = ColumnInfo.Resolve(Type, IsModel, IsStruct).ToArray();
             memberMap = new Dictionary<string, int>(Columns.Length);
-            columnMap = new Dictionary<string, int>(Columns.Length);
+            columnMap = new Dictionary<string, int>(Columns.Length, StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < Columns.Length; i++)
             {
                 var column = Columns[i];
@@ -69,6 +69,12 @@ namespace Framework.Data
                     concurrencyCheckColumnIndex = i;
                 }
             }
+        }
+
+        internal ColumnInfo GetColumn(string columnName)
+        {
+            int colIndex;
+            return columnMap.TryGetValue(columnName, out colIndex) ? Columns[colIndex] : null;
         }
     }
 }

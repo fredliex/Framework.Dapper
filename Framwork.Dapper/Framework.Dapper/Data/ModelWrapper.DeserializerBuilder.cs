@@ -287,12 +287,14 @@ namespace Framework.Data
                      * } else {                                                                             12.     呼叫SqlMapper.FlexibleConvertBoxedFromHeadOfStack來轉型, 創建
                      * }
                      * if (memberType is Nullable<>)                                                        13.     value = new Nullable<T>(value)
-                     *                                                                                      14.     goto finishLabel:
-                     *                                                                                      15. isDbNullLabel:
-                     * if (memberType is Enum? && memberType has EnumValue.NullValue) {                     16.     value = EnumValue.NullValue
-                     * } else {                                                                             17.     value = null
+                     * if (非建構式建立的話)                                                                14.     prop = value
+                     *                                                                                      15.     goto finishLabel:
+                     *                                                                                      16. isDbNullLabel:
+                     * if (非建構式建立 && memberType is Enum? && memberType has EnumValue.NullValue) {     17.     prop = EnumValue.NullValue
+                     * } else {                                                                             18.     value = null
                      * }
-                     *                                                                                      18. finishLabel:
+                     *                                                                                      19. finishLabel:
+                     *                                                                                      
                      */
 
                     bool first = true;
@@ -315,6 +317,7 @@ namespace Framework.Data
                             Type colType = reader.GetFieldType(index);
                             Type memberType = item.ValueType;
                             var nullUnderlyingType = Nullable.GetUnderlyingType(memberType);
+                            object enumNullValue = null;
 
                             //01. if (value == DBNull.Value) goto isDbNullLabel:
                             il.Emit(OpCodes.Dup); // stack is now [target][target][value][value]
@@ -354,7 +357,7 @@ namespace Framework.Data
                                 var unboxType = nullUnderlyingType != null && nullUnderlyingType.IsEnum ? nullUnderlyingType : memberType;  //unboxType不是Enum就是 memberType
                                 if (unboxType.IsEnum)
                                 {
-                                    var fromValueToEnum = EnumValueHelper.GetEnumGetterMethod(unboxType);
+                                    var fromValueToEnum = EnumValueHelper.GetEnumGetterMethod(unboxType, out enumNullValue);
                                     if (fromValueToEnum != null)
                                     {
                                         //05. 如果memberType有設定ValueAttribute的話, 把value轉成enum
@@ -404,12 +407,18 @@ namespace Framework.Data
                             if (nullUnderlyingType != null) il.Emit(OpCodes.Newobj, memberType.GetConstructor(new[] { nullUnderlyingType })); // stack is now [target][target][typed-value]
 
                             //14. goto finishLabel:
-                            il.Emit(OpCodes.Br_S, finishLabel); // stack is now [target]
+                            il.Emit(OpCodes.Br_S, finishLabel); // stack is now [target][target][value]
 
                             //15. 標記 isDbNullLabel:
                             il.MarkLabel(isDbNullLabel); // incoming stack: [target][target][value]
 
                             //16. 如果有定義EnumValue.NullValue ， value = EnumValue.NullValue
+                            if(enumNullValue != null)
+                            {
+                                il.Emit(OpCodes.Pop);   // stack is now [target][target]
+                                il.EmitConstant(enumNullValue);   // stack is now [target][target][value]
+                            }
+                            
 
                         }
                         first = false;

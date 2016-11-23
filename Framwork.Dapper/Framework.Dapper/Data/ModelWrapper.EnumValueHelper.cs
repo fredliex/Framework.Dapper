@@ -15,7 +15,7 @@ namespace Framework.Data
     {
         internal static class EnumValueHelper
         {
-            private abstract class EnumHandlerBase : Dapper.SqlMapper.ITypeHandler
+            internal abstract class EnumHandlerBase : Dapper.SqlMapper.ITypeHandler
             {
                 internal readonly Type EnumType;
                 internal readonly Type ValueType;
@@ -25,7 +25,6 @@ namespace Framework.Data
                 internal readonly MethodInfo nullEnumToValue;  //nullable<enum> 轉 value
                 internal readonly MethodInfo nullEnumsToValues; //nullable<enum>s 轉 values
                 internal readonly MethodInfo valueToEnum;   //value 轉 enum
-
 
                 protected EnumHandlerBase(Type enumType, Type valueUnderlyingType, Type enumCacheType)
                 {
@@ -52,6 +51,8 @@ namespace Framework.Data
 
                 public abstract void SetValue(IDbDataParameter parameter, object value);
                 public abstract object Parse(Type destinationType, object value);
+
+                public abstract object NullValue { get; }
             }
 
             private sealed class EnumHandler<TEnum, TValue> : EnumHandlerBase where TEnum : struct, IComparable, IFormattable, IConvertible
@@ -62,6 +63,7 @@ namespace Framework.Data
                 private readonly ReadOnlyDictionary<TValue, TEnum> toEnumMap;
                 /// <summary>當TValue為null時對應的Enum，null表示沒對應。</summary>
                 private readonly TEnum? nullValue;
+                public override object NullValue { get { return NullValue; } }
 
                 public EnumHandler(IList enums, IList values, object nullValue) : base(typeof(TEnum), typeof(TValue), typeof(EnumHandlerCache<TEnum>))
                 {
@@ -240,10 +242,12 @@ namespace Framework.Data
                 return null;
             }
 
-            internal static MethodInfo GetEnumGetterMethod(Type memberType)
+            internal static MethodInfo GetEnumGetterMethod(Type memberType, out object nullValue)
             {
                 bool isNullableEnum;
-                return GetHandler(memberType, out isNullableEnum)?.valueToEnum;
+                var handler = GetHandler(memberType, out isNullableEnum);
+                nullValue = handler?.NullValue;
+                return handler?.valueToEnum;
             }
 
             /// <summary>取得 Enum 或 Enum? 轉成 Value 的MethodInfo。</summary>
@@ -287,6 +291,7 @@ namespace Framework.Data
                 var handler = GetHandler(enumType, out isNullableEnum);
                 return handler?.ValueUnderlyingType;
             }
+
         }
     }
 }

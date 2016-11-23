@@ -131,27 +131,35 @@ namespace Framework.Data
 
         internal sealed class DeserializerBuilder
         {
-            sealed class TypeMapp : SqlMapper.ITypeMap
+            private static readonly MethodInfo getItem = typeof(IDataRecord).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                        .Where(p => p.GetIndexParameters().Any() && p.GetIndexParameters()[0].ParameterType == typeof(int))
+                        .Select(p => p.GetGetMethod()).First();
+            private static readonly MethodInfo trimRight = typeof(DeserializerBuilder).GetMethod(nameof(DeserializerBuilder.TrimRight), BindingFlags.Static | BindingFlags.NonPublic);
+            private static readonly MethodInfo readChar = typeof(DeserializerBuilder).GetMethod(nameof(DeserializerBuilder.ReadChar), BindingFlags.Static | BindingFlags.NonPublic);
+            private static readonly MethodInfo readGuid = typeof(DeserializerBuilder).GetMethod(nameof(DeserializerBuilder.ReadGuid), BindingFlags.Static | BindingFlags.NonPublic);
+            private static readonly MethodInfo parseEnum = typeof(DeserializerBuilder).GetMethod(nameof(DeserializerBuilder.ParseEnum), BindingFlags.Static | BindingFlags.NonPublic);
+
+            private static string TrimRight(string str)
             {
-                public ConstructorInfo FindConstructor(string[] names, Type[] types)
-                {
-                    throw new NotImplementedException();
-                }
+                return str.Trim(' ');
+            }
 
-                public ConstructorInfo FindExplicitConstructor()
-                {
-                    return null;
-                }
+            private char ReadChar(object value)
+            {
+                string s = value as string;
+                if (s == null || s.Length != 1) throw new ArgumentException("A single-character was expected", nameof(value));
+                return s[0];
+            }
+            private static Guid ReadGuid(object value)
+            {
+                if (value is byte[]) return new Guid((byte[])value);
+                if (value is string) return Guid.Parse((string)value);
+                return (Guid)value;
+            }
 
-                public IMemberMap GetConstructorParameter(ConstructorInfo constructor, string columnName)
-                {
-                    throw new NotImplementedException();
-                }
-
-                public IMemberMap GetMember(string columnName)
-                {
-                    throw new NotImplementedException();
-                }
+            private static T ParseEnum<T>(string value)
+            {
+                return (T)Enum.Parse(typeof(T), value, true);
             }
 
             public Func<IDataReader, object> GetTypeDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)
@@ -259,31 +267,15 @@ namespace Framework.Data
                         il.Emit(OpCodes.Ldloc_1);// [target]
                     }
 
-                    //建立空的型別而已
-                    var members = Enumerable.Empty<ColumnInfo>().Select(n => new { n.ValueType, isConstructor = false });
-                    if (specializedConstructor == null)
-                    {
-                        var table = GetTableInfo(type);
-                        members = names.Select(table.GetColumn).Select(n => n == null ? null : new { n.ValueType, isConstructor = false });
-                    }
-                    else
-                    {
-                        var parameters = specializedConstructor.GetParameters();
-                        members = names
-                            .Select(n => parameters.FirstOrDefault(p => string.Equals(p.Name, n, StringComparison.OrdinalIgnoreCase)))
-                            .Select(n => n == null ? null : new { ValueType = n.ParameterType, isConstructor = true });
-                    }
-
-                    bool first = true;
-                    var allDone = il.DefineLabel();
-                    int enumDeclareLocal = -1, valueCopyLocal = il.DeclareLocal(typeof(object)).LocalIndex;
+                    var table = GetTableInfo(type);
+                    var members = names.Select(table.GetColumn);
 
                     /* 
                      *                                                                                      01.     if (value == DBNull.Value) goto isDbNullLabel:
                      * if (colType == string && member has ColumnAttribute.IsTrimRight)                     02.     value = value.TrimEnd()
                      * if (member has NullMapping)                                                          03.     if (value == NullMapping) goto isDbNullLabel:
-                     * if (memberType is char or char?) {                                                   04.     value = ReadChar(value)
-                     * } else if (memberType is Guid or Guid?) {                                            05.     value = ReadGuid(value)
+                     * if (memberType is char or char?) {                                                   04.     value = SqlMapper.ReadChar(value)
+                     * } else if (memberType is Guid or Guid?) {                                            05.     value = SqlMapper.ReadGuid(value)
                      * } else if (memberType is Enum or Enum?) {
                      *    if (memberType has EnumValue) {                                                   06.     value = getEnumFromValue(value)
                      *    } else if (colType == string) {                                                   07.     value = Enum.Parse(enumType, value, true)
@@ -292,8 +284,7 @@ namespace Framework.Data
                      * } else if (memberType is System.Data.Linq.Binary) {                                  09.     value = new System.Data.Linq.Binary(value)
                      * } else if (memberType 有handler) {                                                   10.     value = SqlMapper.TypeHandlerCache<T>.Parse(value)
                      * } else if (型別一致) {                                                               11.     value = (memberType)value
-                     * } else {
-                     *                                                                                      12.     呼叫SqlMapper.FlexibleConvertBoxedFromHeadOfStack來轉型, 創建
+                     * } else {                                                                             12.     呼叫SqlMapper.FlexibleConvertBoxedFromHeadOfStack來轉型, 創建
                      * }
                      * if (memberType is Nullable<>)                                                        13.     value = new Nullable<T>(value)
                      *                                                                                      14.     goto finishLabel:
@@ -304,6 +295,9 @@ namespace Framework.Data
                      *                                                                                      18. finishLabel:
                      */
 
+                    bool first = true;
+                    var allDone = il.DefineLabel();
+                    int enumDeclareLocal = -1, valueCopyLocal = il.DeclareLocal(typeof(object)).LocalIndex;
                     foreach (var item in members)
                     {
                         if (item != null)
@@ -317,11 +311,105 @@ namespace Framework.Data
                             il.Emit(OpCodes.Stloc_0);// stack is now [target][target][reader][index]
                             il.Emit(OpCodes.Callvirt, getItem); // stack is now [target][target][value-as-object]
                             il.Emit(OpCodes.Dup); // stack is now [target][target][value-as-object][value-as-object]
-                            StoreLocal(il, valueCopyLocal);
+                            Reflect.Dapper.StoreLocal(il, valueCopyLocal);  //stack is now [target][target][value]
                             Type colType = reader.GetFieldType(index);
-                            Type memberType = item.MemberType;
+                            Type memberType = item.ValueType;
+                            var nullUnderlyingType = Nullable.GetUnderlyingType(memberType);
+
+                            //01. if (value == DBNull.Value) goto isDbNullLabel:
+                            il.Emit(OpCodes.Dup); // stack is now [target][target][value][value]
+                            il.Emit(OpCodes.Isinst, typeof(DBNull)); // stack is now [target][target][value-as-object][DBNull or null]
+                            il.Emit(OpCodes.Brtrue_S, isDbNullLabel); // stack is now [target][target][value-as-object]
 
 
+                            //02. 如果欄位是字串且有定義ColumnAttribute.IsTrimRight    value = value.TrimEnd()
+                            if (colType == typeof(string) && item.IsTrimRight)
+                            {
+                                il.Emit(OpCodes.Unbox_Any, colType); // stack is now [target][target][string]
+                                il.EmitCall(OpCodes.Call, trimRight, null); // stack is now [target][target][string]
+                            }
+
+                            //03. 如果member有定義NullMapping   if (value == NullMapping) goto isDbNullLabel:
+                            if (item.NullMapping != null)
+                            {
+                                il.Emit(OpCodes.Dup); // stack is now [target][target][value][value]
+                                il.EmitCall(OpCodes.Callvirt, typeof(object).GetMethod(nameof(object.ToString)), null);     // stack is now [target][target][value][value-text]
+                                il.EmitConstant(item.NullMapping.ToString());   // stack is now [target][target][value][value-ToString][NullMapping-text]
+                                il.EmitCall(OpCodes.Call, Reflect.String_Equals, null); // stack is now [target][target][value][bool]
+                                il.Emit(OpCodes.Brtrue_S, isDbNullLabel); // stack is now [target][target][value]
+                            }
+
+                            //04. 如果member是char或是char? ， value = ReadChar(value)
+                            if (memberType == typeof(char) || memberType == typeof(char?))
+                            {
+                                il.EmitCall(OpCodes.Call, readChar, null); // stack is now [target][target][typed-value]
+                            }
+                            //04. 如果member是Guid或是Guid? ， value = ReadGuid(value)
+                            else if (memberType == typeof(Guid) || memberType == typeof(Guid?))
+                            {
+                                il.EmitCall(OpCodes.Call, readGuid, null); // stack is now [target][target][typed-value]
+                            }
+                            else
+                            {
+                                var unboxType = nullUnderlyingType != null && nullUnderlyingType.IsEnum ? nullUnderlyingType : memberType;  //unboxType不是Enum就是 memberType
+                                if (unboxType.IsEnum)
+                                {
+                                    var fromValueToEnum = EnumValueHelper.GetEnumGetterMethod(unboxType);
+                                    if (fromValueToEnum != null)
+                                    {
+                                        //05. 如果memberType有設定ValueAttribute的話, 把value轉成enum
+                                        il.EmitCall(OpCodes.Call, fromValueToEnum, null);  // stack is now [target][target][enum-value]
+                                    }
+                                    else if (colType == typeof(string))
+                                    {
+                                        //07. 如果欄位是字串, Enum.Parse
+                                        il.EmitCall(OpCodes.Call, parseEnum.MakeGenericMethod(unboxType), null);  // stack is now [target][target][enum-value]
+                                    }
+                                    else
+                                    {
+                                        //08. value = (enumType)(Enum基礎型別)value
+                                        Type numericType = Enum.GetUnderlyingType(unboxType);
+                                        Reflect.Dapper.FlexibleConvertBoxedFromHeadOfStack(il, colType, unboxType, numericType);
+                                    }
+                                }
+                                else if (memberType.FullName == Reflect.Dapper.LinqBinary)
+                                {
+                                    //09. 是System.Data.Linq.Binary的話，new System.Data.Linq.Binary((byte[])value)
+                                    il.Emit(OpCodes.Unbox_Any, typeof(byte[])); // stack is now [target][target][byte-array]
+                                    il.Emit(OpCodes.Newobj, memberType.GetConstructor(new Type[] { typeof(byte[]) }));// stack is now [target][target][binary]
+                                }
+                                else if (Reflect.Dapper.HasTypeHandler(unboxType))
+                                {
+#pragma warning disable 618
+                                    //10. 有TypeHandler, 呼叫SqlMapper.TypeHandlerCache<T>.Parse(value)
+                                    il.EmitCall(OpCodes.Call, typeof(TypeHandlerCache<>).MakeGenericType(unboxType).GetMethod(nameof(TypeHandlerCache<int>.Parse)), null); // stack is now [parameters] [parameters] [parameter]
+#pragma warning restore 618
+                                }
+                                else 
+                                {
+                                    TypeCode dataTypeCode = Type.GetTypeCode(colType), unboxTypeCode = Type.GetTypeCode(unboxType);
+                                    if (colType == unboxType || dataTypeCode == unboxTypeCode || dataTypeCode == Type.GetTypeCode(nullUnderlyingType))
+                                    {
+                                        //11. 型別一致， value = (memberType)value
+                                        il.Emit(OpCodes.Unbox_Any, unboxType); // stack is now [target][target][typed-value]
+                                    }
+                                    else
+                                    {
+                                        //12. 轉型
+                                        Reflect.Dapper.FlexibleConvertBoxedFromHeadOfStack(il, colType, nullUnderlyingType ?? memberType, null);
+                                    }
+                                }
+                            }
+                            //13. 如果是Nullable<> ， value = new Nullable<T>(value)
+                            if (nullUnderlyingType != null) il.Emit(OpCodes.Newobj, memberType.GetConstructor(new[] { nullUnderlyingType })); // stack is now [target][target][typed-value]
+
+                            //14. goto finishLabel:
+                            il.Emit(OpCodes.Br_S, finishLabel); // stack is now [target]
+
+                            //15. 標記 isDbNullLabel:
+                            il.MarkLabel(isDbNullLabel); // incoming stack: [target][target][value]
+
+                            //16. 如果有定義EnumValue.NullValue ， value = EnumValue.NullValue
 
                         }
                         first = false;

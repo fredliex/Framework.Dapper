@@ -34,6 +34,7 @@ namespace Framework.Data
             internal static readonly MethodInfo SqlMapper_Format = typeof(SqlMapper).GetMethod(nameof(SqlMapper.Format), BindingFlags.Static | BindingFlags.Public);
             internal static readonly MethodInfo String_Length_Get = typeof(string).GetProperty(nameof(string.Length)).GetGetMethod();
             internal static readonly MethodInfo String_Replace = typeof(string).GetMethod(nameof(string.Replace), BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string), typeof(string) }, null);
+            internal static readonly MethodInfo String_Equals = typeof(string).GetMethod(nameof(string.Equals), BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(string), typeof(string) }, null);
             internal static readonly MethodInfo IList_Add = typeof(IList).GetMethod(nameof(IList.Add));
             internal static readonly FieldInfo DBNull_Value = typeof(DBNull).GetField(nameof(DBNull.Value));
             internal static readonly MethodInfo CultureInfo_InvariantCulture_Get = typeof(CultureInfo).GetProperty(nameof(CultureInfo.InvariantCulture), BindingFlags.Public | BindingFlags.Static).GetGetMethod();
@@ -48,6 +49,8 @@ namespace Framework.Data
                 internal static readonly Action<ILGenerator, int> EmitInt32;
                 internal static readonly Func<TypeCode, MethodInfo> GetToString;
                 internal static readonly Func<Type, bool> HasTypeHandler;
+                internal static readonly Action<ILGenerator, int> StoreLocal;
+                internal static readonly Action<ILGenerator, Type, Type, Type> FlexibleConvertBoxedFromHeadOfStack;
                 //Dapper.DynamicParameters
                 internal static readonly DbType EnumerableMultiParameter;
 
@@ -60,6 +63,8 @@ namespace Framework.Data
                     InternalHelper.WrapMethod(typeof(SqlMapper), "EmitInt32", out EmitInt32);
                     InternalHelper.WrapMethod(typeof(SqlMapper), "GetToString", out GetToString);
                     InternalHelper.WrapMethod(typeof(SqlMapper), "HasTypeHandler", out HasTypeHandler);
+                    InternalHelper.WrapMethod(typeof(SqlMapper), "StoreLocal", out StoreLocal);
+                    InternalHelper.WrapMethod(typeof(SqlMapper), "FlexibleConvertBoxedFromHeadOfStack", out FlexibleConvertBoxedFromHeadOfStack);
 
                     InternalHelper.WrapField(typeof(global::Dapper.DynamicParameters), "EnumerableMultiParameter", out EnumerableMultiParameter);
                 }

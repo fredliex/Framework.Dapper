@@ -31,6 +31,8 @@ namespace Framework.Data
 
         internal abstract void EmitGenerateGet(ILGenerator il);
 
+        internal abstract void EmitGenerateSet(ILGenerator il);
+
         private ColumnInfo(MemberInfo member, Type valueType, ColumnAttribute columnAttribute)
         {
             MemberName = member.Name;
@@ -66,14 +68,15 @@ namespace Framework.Data
             internal FieldColumnInfo(FieldInfo field, ColumnAttribute columnAttribute, bool isStructModel) : base(field, field.FieldType, columnAttribute)
             {
                 member = field;
-                //callOpCode = field.FieldType.IsValueType ? OpCodes.Ldflda : OpCodes.Ldfld;
-
-                callOpCode = OpCodes.Ldfld;
             }
 
             internal override void EmitGenerateGet(ILGenerator il)
             {
-                il.Emit(callOpCode, member);
+                il.Emit(OpCodes.Ldfld, member);
+            }
+            internal override void EmitGenerateSet(ILGenerator il)
+            {
+                il.Emit(OpCodes.Stfld, member);
             }
         }
 
@@ -82,6 +85,7 @@ namespace Framework.Data
             private PropertyInfo member;
             private OpCode callOpCode;
             private MethodInfo getMethod;
+            private MethodInfo setMethod;
             internal override MemberInfo Member { get { return member; } }
             internal override MemberTypes MemberType { get { return MemberTypes.Property; } }
 
@@ -90,11 +94,15 @@ namespace Framework.Data
                 member = property;
                 callOpCode = isStructModel ? OpCodes.Call : OpCodes.Callvirt;
                 getMethod = property.GetGetMethod(true) ?? property.GetGetMethod(false);
+                setMethod = property.GetSetMethod(true) ?? property.GetSetMethod(false);
             }
-
             internal override void EmitGenerateGet(ILGenerator il)
             {
                 il.EmitCall(callOpCode, getMethod, null);
+            }
+            internal override void EmitGenerateSet(ILGenerator il)
+            {
+                il.EmitCall(callOpCode, setMethod, null);
             }
         }
 

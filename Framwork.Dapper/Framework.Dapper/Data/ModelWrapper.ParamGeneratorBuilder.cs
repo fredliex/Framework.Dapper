@@ -1,4 +1,4 @@
-﻿#define saveParamAssembly1
+﻿//#define saveParamAssembly
 
 using Dapper;
 using System;

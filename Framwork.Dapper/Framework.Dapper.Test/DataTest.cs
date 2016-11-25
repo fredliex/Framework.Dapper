@@ -105,7 +105,7 @@ namespace Framework.Test
         #endregion
 
         #region EnumMapping
-        internal enum StringEnum
+        public enum StringEnum
         {
             [Value("aa")]
             A,
@@ -114,13 +114,13 @@ namespace Framework.Test
             [Value("cc")]
             C
         }
-        internal enum NormalEnum
+        public enum NormalEnum
         {
             A = 1,
             B = 2,
             C = 3
         }
-        internal sealed class EnumMappingModel : IModel
+        public sealed class EnumMappingModel : IModel
         {
             public NormalEnum norEnum;
             public StringEnum strEnum;
@@ -185,7 +185,7 @@ namespace Framework.Test
         #endregion
 
         #region NullMapping
-        internal sealed class NullMappingModel : IModel
+        public sealed class NullMappingModel : IModel
         {
             [Column(NullMapping = "A")]
             public NormalEnum? norEnum;
@@ -300,16 +300,6 @@ namespace Framework.Test
         [Fact(DisplayName = "aaaa")]
         public void aaaaa()
         {
-            var aaa = new[] { 0, 1, 2, 3, 4, 5, 6 };
-            var types = new int[5];
-            for (var i = 0; i < types.Length; i++) { types[i] = aaa[i]; }
-
-
-
-            return;
-            var typeCaches = Type.GetType("Dapper.SqlMapper, Dapper").GetNestedType("TypeDeserializerCache", BindingFlags.NonPublic);
-            var caches = typeCaches.GetField("byType", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
-
             using (var conn = DbHelper.OpenConnection("test.local"))
             {
                 var aa = conn.Query<NullMappingModel>("select '1' as strCol").ToList();

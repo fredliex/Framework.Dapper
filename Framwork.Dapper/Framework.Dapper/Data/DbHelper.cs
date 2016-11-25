@@ -40,10 +40,19 @@ namespace Framework.Data
         {
             var paramWrapper = ModelWrapper.WrapParam(param, commandType ?? CommandType.Text, sql);
             var commandDefinition = new CommandDefinition(sql, paramWrapper, transaction, commandTimeout, commandType, CommandFlags.Buffered);
-            var reader = SqlMapper.ExecuteReader(conn, commandDefinition, CommandBehavior.SequentialAccess | CommandBehavior.SingleResult);
-            //reader
-            return null;
+            using (var reader = SqlMapper.ExecuteReader(conn, commandDefinition, CommandBehavior.SequentialAccess | CommandBehavior.SingleResult))
+            {
 
+                var deserializerBuilder = new ModelWrapper.DeserializerBuilder();
+                var typeDeserializer = deserializerBuilder.GetTypeDeserializer(typeof(T), reader);
+
+                var buff = new List<T>();
+                while (reader.Read())
+                {
+                    buff.Add((T)typeDeserializer(reader));
+                }
+                return buff;
+            }
         }
     }
 }

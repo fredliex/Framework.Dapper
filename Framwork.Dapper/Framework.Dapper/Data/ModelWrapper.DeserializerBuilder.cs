@@ -1,4 +1,4 @@
-﻿#define saveParamAssembly
+﻿//#define saveParamAssembly
 
 using Dapper;
 using System;
@@ -173,7 +173,7 @@ namespace Framework.Data
                 var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave);
                 var moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName.Name, assemblyName.Name + ".dll");
                 var builder = moduleBuilder.DefineType(type + "TypeDeserializer", TypeAttributes.Public);
-                var dm = builder.DefineMethod("DynamicCreate", MethodAttributes.Public | MethodAttributes.Static, null, new[] { typeof(IDbCommand), typeof(object) });
+                var dm = builder.DefineMethod("DynamicCreate", MethodAttributes.Public | MethodAttributes.Static, returnType, new[] { typeof(IDataReader) });
 #else
                 var dm = new DynamicMethod("Deserialize" + Guid.NewGuid().ToString(), returnType, new[] { typeof(IDataReader) }, type, true);
 #endif
@@ -270,10 +270,7 @@ namespace Framework.Data
                     }
                 }
 
-                /*
                 il.BeginExceptionBlock();
-                */
-
 
                 if (type.IsValueType)
                 {
@@ -314,14 +311,14 @@ namespace Framework.Data
                  * if (memberType has EnumValue.NullValue) {                                            18.     value = EnumValue.NullValue
                  *    if (memberType is Nullable<>)                                                     19.     value = new Nullable<T>(value)
                  *    if (非建構式)                                                                     20.     prop = value
-                 * } else if (是建構式) {                                                               21.     value = null
+                 * } else {                                                                             21.     將target從stack移除
+                 *    if (是建構式) {                                                                   22.     value = null
                  * }
-                 *                                                                                      20. finishLabel:
+                 *                                                                                      23. finishLabel:
                  */
 
-                bool first = true;
                 var allDone = il.DefineLabel();
-                int enumDeclareLocal = -1, valueCopyLocal = il.DeclareLocal(typeof(object)).LocalIndex;     //valueCopyLocal是區域變數2, 放value值
+                int valueCopyLocal = il.DeclareLocal(typeof(object)).LocalIndex;     //valueCopyLocal是區域變數2, 放value值
                 foreach (var item in members)
                 {
                     if (item != null)
@@ -346,7 +343,6 @@ namespace Framework.Data
                         il.Emit(OpCodes.Isinst, typeof(DBNull));        // stack is now [target][target][value][DBNull or null]
                         il.Emit(OpCodes.Brtrue_S, isDbNullLabel);       // stack is now [target][target][value]
 
-                        /*
                         //02. 如果欄位是字串且有定義ColumnAttribute.IsTrimRight    value = value.TrimEnd()
                         if (colType == typeof(string) && item.IsTrimRight)
                         {
@@ -364,14 +360,15 @@ namespace Framework.Data
                             il.Emit(OpCodes.Brtrue_S, isDbNullLabel); // stack is now [target][target][value]
                         }
 
-                        //04. 如果member是char或是char? ， value = ReadChar(value)
+                        var isNullableConstructor = nullUnderlyingType != null; //nullable是否透過建構式來建立
                         if (memberType == typeof(char) || memberType == typeof(char?))
                         {
+                            //04. 如果member是char或是char? ， value = ReadChar(value)
                             il.EmitCall(OpCodes.Call, readChar, null); // stack is now [target][target][typed-value]
                         }
-                        //04. 如果member是Guid或是Guid? ， value = ReadGuid(value)
                         else if (memberType == typeof(Guid) || memberType == typeof(Guid?))
                         {
+                            //04. 如果member是Guid或是Guid? ， value = ReadGuid(value)
                             il.EmitCall(OpCodes.Call, readGuid, null); // stack is now [target][target][typed-value]
                         }
                         else
@@ -417,17 +414,17 @@ namespace Framework.Data
                                 {
                                     //11. 型別一致， value = (memberType)value
                                     il.Emit(OpCodes.Unbox_Any, unboxType); // stack is now [target][target][typed-value]
+                                    isNullableConstructor = false;      //nullable的話已直接轉型, 所以不須透建構式
                                 }
                                 else
                                 {
-                                    //12. 轉型
+                                    //12. 型別不一致，必須透過中介轉型
                                     Reflect.Dapper.FlexibleConvertBoxedFromHeadOfStack(il, colType, nullUnderlyingType ?? memberType, null);
                                 }
                             }
                         }
                         //13. 如果是Nullable<> ， value = new Nullable<T>(value)
-                        if (nullUnderlyingType != null) il.Emit(OpCodes.Newobj, memberType.GetConstructor(new[] { nullUnderlyingType })); // stack is now [target][target][typed-value]
-                        */
+                        if (isNullableConstructor) il.Emit(OpCodes.Newobj, memberType.GetConstructor(new[] { nullUnderlyingType })); // stack is now [target][target][typed-value]
 
                         //14. 非建構式的話， prop = value
                         if (specializedConstructor == null) item.EmitGenerateSet(il); //stack is now[target]
@@ -452,15 +449,18 @@ namespace Framework.Data
                             //20. 非建構式的話， prop = value
                             if (specializedConstructor == null) item.EmitGenerateSet(il);   //stack is now[target]
                         }
-                        else if (specializedConstructor != null)
+                        else
                         {
-                            //21. value = null
-                            il.Emit(OpCodes.Ldnull); // stack [null]
+                            //21. 將target從stack移除
+                            il.Emit(OpCodes.Pop);   // stack is now [target]
+                            if (specializedConstructor != null)
+                            {
+                                //22. value = null
+                                il.Emit(OpCodes.Ldnull); // stack is now [target][null]
+                            }
                         }
-
                         il.MarkLabel(finishLabel);
                     }
-                    first = false;
                     index += 1;
                 }
 
@@ -486,7 +486,6 @@ namespace Framework.Data
                 
                 il.MarkLabel(allDone);
 
-                /*
                 il.BeginCatchBlock(typeof(Exception)); // stack is Exception
                 il.Emit(OpCodes.Ldloc_0); // stack is Exception, index
                 il.Emit(OpCodes.Ldarg_0); // stack is Exception, index, reader
@@ -494,7 +493,6 @@ namespace Framework.Data
                 il.EmitCall(OpCodes.Call, Reflect.SqlMapper_ThrowDataException, null);
 
                 il.EndExceptionBlock();
-                */
 
                 il.Emit(OpCodes.Ldloc_1); // stack is [rval]
                 if (type.IsValueType)

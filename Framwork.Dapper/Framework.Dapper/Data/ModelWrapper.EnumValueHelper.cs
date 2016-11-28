@@ -63,7 +63,7 @@ namespace Framework.Data
                 private readonly ReadOnlyDictionary<TValue, TEnum> toEnumMap;
                 /// <summary>當TValue為null時對應的Enum，null表示沒對應。</summary>
                 private readonly TEnum? nullValue;
-                public override object NullValue { get { return NullValue; } }
+                public override object NullValue { get { return nullValue; } }
 
                 public EnumHandler(IList enums, IList values, object nullValue) : base(typeof(TEnum), typeof(TValue), typeof(EnumHandlerCache<TEnum>))
                 {

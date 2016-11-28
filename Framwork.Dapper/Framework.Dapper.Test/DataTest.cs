@@ -42,6 +42,14 @@ namespace Framework.Test
             throw new Exception("未處理");
         }
 
+        private static T QueryData<T>(string sql)
+        {
+            using (var conn = DbHelper.OpenConnection("test.local"))
+            {
+                return conn.Query<T>(sql).FirstOrDefault();
+            }
+        }
+
         #region 非IModel
         internal sealed class NonInterfaceModel
         {
@@ -51,8 +59,8 @@ namespace Framework.Test
             internal string strCol4 { get; set; }
             public StringEnum strEnum { get; set; }
         }
-        [Fact(DisplayName = "無繼承IModel")]
-        public void NonModelInterface()
+        [Fact(DisplayName = "無繼承IModel-參數")]
+        public void NonModelInterfaceParam()
         {
             var model = new NonInterfaceModel { strCol1 = "3", strCol2 = "4", strCol3 = "5", strCol4 = "6", strEnum = StringEnum.B };
             var sqlStr = @"select * from tabA where strCol1=@strCol1 and strCol2=@strCol2 and strCol3=@strCol3 and strCol4=@strCol4 and strEnum=@strEnum";
@@ -61,6 +69,25 @@ namespace Framework.Test
             command.Parameters
                 .Verify("strCol2", model.strCol2, DbType.String, 4000)
                 .Verify("strEnum", "bb", DbType.String, 4000);
+        }
+
+
+        [Fact(DisplayName = "無繼承IModel-查詢")]
+        public void NonInterfaceModelQuery()
+        {
+            var model = QueryData<NonInterfaceModel>("select 'a' strCol1, 'b' strCol2, 'c' strCol3, 'd' strCol4, 'bb' strEnum");
+            Assert.Equal(null, model.strCol1);
+            Assert.Equal("b", model.strCol2);
+            Assert.Equal(null, model.strCol3);
+            Assert.Equal(null, model.strCol4);
+            Assert.Equal(StringEnum.B, model.strEnum);
+
+            model = QueryData<NonInterfaceModel>("select null strCol1, null strCol2, null strCol3, null strCol4, null strEnum");
+            Assert.Equal(null, model.strCol1);
+            Assert.Equal(null, model.strCol2);
+            Assert.Equal(null, model.strCol3);
+            Assert.Equal(null, model.strCol4);
+            Assert.Equal(default(StringEnum), model.strEnum);
         }
         #endregion
 
@@ -84,8 +111,8 @@ namespace Framework.Test
             internal string nonCol4 { get; set; }
         }
 
-        [Fact(DisplayName = "public 與 internal")]
-        public void PublicInternal()
+        [Fact(DisplayName = "public 與 internal-參數")]
+        public void PublicInternalParam()
         {
             var model = new PublicInternalModel {
                 strCol1 = "3", strCol2 = "4", strCol3 = "5", strCol4 = "6",
@@ -101,6 +128,30 @@ namespace Framework.Test
                 .Verify("strCol2", model.strCol2, DbType.String, 4000)
                 .Verify("strCol3", model.strCol3, DbType.String, 4000)
                 .Verify("strCol4", model.strCol4, DbType.String, 4000);
+        }
+
+        [Fact(DisplayName = "public 與 internal-查詢")]
+        public void PublicInternalQuery()
+        {
+            var model = QueryData<PublicInternalModel>("select 'a' strCol1, 'b' strCol2, 'c' strCol3, 'd' strCol4, 'a1' nonCol1, 'a2' nonCol2, 'a3' nonCol3, 'a4' nonCol4");
+            Assert.Equal("a", model.strCol1);
+            Assert.Equal("b", model.strCol2);
+            Assert.Equal("c", model.strCol3);
+            Assert.Equal("d", model.strCol4);
+            Assert.Equal(null, model.nonCol1);
+            Assert.Equal(null, model.nonCol2);
+            Assert.Equal(null, model.nonCol3);
+            Assert.Equal(null, model.nonCol4);
+
+            model = QueryData<PublicInternalModel>("select null strCol1, null strCol2, null strCol3, null strCol4, null nonCol1, null nonCol2, null nonCol3, null nonCol4");
+            Assert.Equal(null, model.strCol1);
+            Assert.Equal(null, model.strCol2);
+            Assert.Equal(null, model.strCol3);
+            Assert.Equal(null, model.strCol4);
+            Assert.Equal(null, model.nonCol1);
+            Assert.Equal(null, model.nonCol2);
+            Assert.Equal(null, model.nonCol3);
+            Assert.Equal(null, model.nonCol4);
         }
         #endregion
 
@@ -130,8 +181,8 @@ namespace Framework.Test
         }
 
 
-        [Fact(DisplayName = "列舉對應")]
-        public void EnumMapping()
+        [Fact(DisplayName = "列舉對應-參數")]
+        public void EnumMappingParam()
         {
             var model = new EnumMappingModel { norEnum = NormalEnum.B, strEnum = StringEnum.B, strCol = "abcd", intCol = 10, decimalCol = 10 };
             var sqlStr = @"select * from tabA where norEnum=@norEnum and strEnum=@strEnum and strCol=@strCol and intCol=@intCol and decimalCol=@decimalCol";
@@ -144,6 +195,25 @@ namespace Framework.Test
                 .Verify("intCol", model.intCol, DbType.Int32)
                 .Verify("decimalCol", model.decimalCol, DbType.Decimal);
         }
+
+        [Fact(DisplayName = "列舉對應-查詢")]
+        public void EnumMappingQuery()
+        {
+            var model = QueryData<EnumMappingModel>("select 2 norEnum, 'bb' strEnum, 'c' strCol, 1 intCol, 1.5 decimalCol");
+            Assert.Equal((NormalEnum)2, model.norEnum);
+            Assert.Equal(StringEnum.B, model.strEnum);
+            Assert.Equal("c", model.strCol);
+            Assert.Equal(1, model.intCol);
+            Assert.Equal(1.5m, model.decimalCol);
+
+            model = QueryData<EnumMappingModel>("select null norEnum, null strEnum, null strCol, null intCol, null decimalCol");
+            Assert.Equal(default(NormalEnum), model.norEnum);
+            Assert.Equal(default(StringEnum), model.strEnum);
+            Assert.Equal(null, model.strCol);
+            Assert.Equal(default(int), model.intCol);
+            Assert.Equal(default(decimal), model.decimalCol);
+        }
+
         #endregion
 
         #region Nullable
@@ -156,8 +226,8 @@ namespace Framework.Test
             public decimal? decimalCol;
         }
 
-        [Fact(DisplayName = "Nullable")]
-        public void NullableTest()
+        [Fact(DisplayName = "Nullable-參數")]
+        public void NullableParam()
         {
             var model = new NullableModel { norEnum = NormalEnum.B, strEnum = StringEnum.B, strCol = "abcd", intCol = 10, decimalCol = null };
             var sqlStr = @"select * from tabA where norEnum=@norEnum and strEnum=@strEnum and strCol=@strCol and intCol=@intCol and decimalCol=@decimalCol";
@@ -181,6 +251,29 @@ namespace Framework.Test
                 .Verify("strCol", DBNull.Value, DbType.String, 0)
                 .Verify("intCol", DBNull.Value, DbType.Int32)
                 .Verify("decimalCol", DBNull.Value, DbType.Decimal);
+        }
+
+        [Fact(DisplayName = "Nullable-查詢")]
+        public void NullableQuery()
+        {
+            var model = QueryData<NullableModel>("select 2 norEnum, 'bb' strEnum, 'c' strCol, 1 intCol, 1.5 decimalCol");
+            Assert.Equal((NormalEnum)2, model.norEnum);
+            Assert.Equal(StringEnum.B, model.strEnum);
+            Assert.Equal("c", model.strCol);
+            Assert.Equal(1, model.intCol);
+            Assert.Equal(1.5m, model.decimalCol);
+
+            model = QueryData<NullableModel>("select null norEnum, null strEnum, null strCol, null intCol, null decimalCol");
+            Assert.Equal(null, model.norEnum);
+            Assert.Equal(null, model.strEnum);
+            Assert.Equal(null, model.strCol);
+            Assert.Equal(null, model.intCol);
+            Assert.Equal(null, model.decimalCol);
+
+            /*
+            var model = QueryData<NullableModel>("select null intCol");
+            Assert.Equal(null, model.intCol);
+            */
         }
         #endregion
 
@@ -238,10 +331,6 @@ namespace Framework.Test
         }
         #endregion
 
-        private static Hashtable a = new Hashtable();
-        private static Hashtable b = a;
-
-
         #region 
         [Fact(DisplayName = "字典")]
         public void DictionaryParam()
@@ -297,12 +386,20 @@ namespace Framework.Test
         }
         #endregion
 
+
         [Fact(DisplayName = "aaaa")]
         public void aaaaa()
         {
+            var sqlStr = @"select 
+'A' as norEnum,
+'bb' as strEnum,
+'1' as strCol,
+null as intCol,
+10 as decimalCol
+";
             using (var conn = DbHelper.OpenConnection("test.local"))
             {
-                var aa = conn.Query<NullMappingModel>("select '1' as strCol").ToList();
+                var aa = conn.Query<NullMappingModel>(sqlStr).ToList();
             }
         }
     }

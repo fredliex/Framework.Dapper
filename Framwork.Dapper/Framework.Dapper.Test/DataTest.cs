@@ -50,8 +50,8 @@ namespace Framework.Test
             }
         }
 
-        #region 非IModel
-        internal sealed class NonInterfaceModel
+        #region 非IModel物件
+        internal sealed class NonInterfaceClass
         {
             public string strCol1;
             public string strCol2 { get; set; }
@@ -59,10 +59,10 @@ namespace Framework.Test
             internal string strCol4 { get; set; }
             public StringEnum strEnum { get; set; }
         }
-        [Fact(DisplayName = "無繼承IModel-參數")]
-        public void NonModelInterfaceParam()
+        [Fact(DisplayName = "非IModel物件-參數")]
+        public void NonInterfaceClassParam()
         {
-            var model = new NonInterfaceModel { strCol1 = "3", strCol2 = "4", strCol3 = "5", strCol4 = "6", strEnum = StringEnum.B };
+            var model = new NonInterfaceClass { strCol1 = "3", strCol2 = "4", strCol3 = "5", strCol4 = "6", strEnum = StringEnum.B };
             var sqlStr = @"select * from tabA where strCol1=@strCol1 and strCol2=@strCol2 and strCol3=@strCol3 and strCol4=@strCol4 and strEnum=@strEnum";
             var command = GetCommand<SqlCommand>(sqlStr, model);
             Assert.Equal(2, command.Parameters.Count);
@@ -72,17 +72,17 @@ namespace Framework.Test
         }
 
 
-        [Fact(DisplayName = "無繼承IModel-查詢")]
-        public void NonInterfaceModelQuery()
+        [Fact(DisplayName = "非IModel物件-查詢")]
+        public void NonInterfaceClassQuery()
         {
-            var model = QueryData<NonInterfaceModel>("select 'a' strCol1, 'b' strCol2, 'c' strCol3, 'd' strCol4, 'bb' strEnum");
+            var model = QueryData<NonInterfaceClass>("select 'a' strCol1, 'b' strCol2, 'c' strCol3, 'd' strCol4, 'bb' strEnum");
             Assert.Equal(null, model.strCol1);
             Assert.Equal("b", model.strCol2);
             Assert.Equal(null, model.strCol3);
             Assert.Equal(null, model.strCol4);
             Assert.Equal(StringEnum.B, model.strEnum);
 
-            model = QueryData<NonInterfaceModel>("select null strCol1, null strCol2, null strCol3, null strCol4, null strEnum");
+            model = QueryData<NonInterfaceClass>("select null strCol1, null strCol2, null strCol3, null strCol4, null strEnum");
             Assert.Equal(null, model.strCol1);
             Assert.Equal(null, model.strCol2);
             Assert.Equal(null, model.strCol3);
@@ -91,6 +91,46 @@ namespace Framework.Test
         }
         #endregion
 
+        #region 非IModel結構
+        internal struct NonInterfaceStruct
+        {
+            public string strCol1;
+            public string strCol2 { get; set; }
+            internal string strCol3;
+            internal string strCol4 { get; set; }
+            public StringEnum strEnum { get; set; }
+        }
+        [Fact(DisplayName = "非IModel結構-參數")]
+        public void NonInterfaceStructParam()
+        {
+            var model = new NonInterfaceStruct { strCol1 = "3", strCol2 = "4", strCol3 = "5", strCol4 = "6", strEnum = StringEnum.B };
+            var sqlStr = @"select * from tabA where strCol1=@strCol1 and strCol2=@strCol2 and strCol3=@strCol3 and strCol4=@strCol4 and strEnum=@strEnum";
+            var command = GetCommand<SqlCommand>(sqlStr, model);
+            Assert.Equal(2, command.Parameters.Count);
+            command.Parameters
+                .Verify("strCol2", model.strCol2, DbType.String, 4000)
+                .Verify("strEnum", "bb", DbType.String, 4000);
+        }
+
+
+        [Fact(DisplayName = "非IModel結構-查詢")]
+        public void NonInterfaceStructQuery()
+        {
+            var model = QueryData<NonInterfaceStruct>("select 'a' strCol1, 'b' strCol2, 'c' strCol3, 'd' strCol4, 'bb' strEnum");
+            Assert.Equal(null, model.strCol1);
+            Assert.Equal("b", model.strCol2);
+            Assert.Equal(null, model.strCol3);
+            Assert.Equal(null, model.strCol4);
+            Assert.Equal(StringEnum.B, model.strEnum);
+
+            model = QueryData<NonInterfaceStruct>("select null strCol1, null strCol2, null strCol3, null strCol4, null strEnum");
+            Assert.Equal(null, model.strCol1);
+            Assert.Equal(null, model.strCol2);
+            Assert.Equal(null, model.strCol3);
+            Assert.Equal(null, model.strCol4);
+            Assert.Equal(default(StringEnum), model.strEnum);
+        }
+        #endregion
 
         #region PublicInternal
         internal sealed class PublicInternalModel : IModel
@@ -111,7 +151,7 @@ namespace Framework.Test
             internal string nonCol4 { get; set; }
         }
 
-        [Fact(DisplayName = "public 與 internal-參數")]
+        [Fact(DisplayName = "public 與 internal物件-參數")]
         public void PublicInternalParam()
         {
             var model = new PublicInternalModel {
@@ -130,7 +170,7 @@ namespace Framework.Test
                 .Verify("strCol4", model.strCol4, DbType.String, 4000);
         }
 
-        [Fact(DisplayName = "public 與 internal-查詢")]
+        [Fact(DisplayName = "public 與 internal物件-查詢")]
         public void PublicInternalQuery()
         {
             var model = QueryData<PublicInternalModel>("select 'a' strCol1, 'b' strCol2, 'c' strCol3, 'd' strCol4, 'a1' nonCol1, 'a2' nonCol2, 'a3' nonCol3, 'a4' nonCol4");
@@ -154,6 +194,77 @@ namespace Framework.Test
             Assert.Equal(null, model.nonCol4);
         }
         #endregion
+
+        #region PublicInternal
+        internal struct PublicInternalStruct : IModel
+        {
+            public string strCol1;
+            public string strCol2 { get; set; }
+            [Column]
+            internal string strCol3;
+            [Column]
+            internal string strCol4 { get; set; }
+
+            [NonColumn]
+            public string nonCol1;
+            [NonColumn]
+            public string nonCol2 { get; set; }
+
+            internal string nonCol3;
+            internal string nonCol4 { get; set; }
+        }
+
+        [Fact(DisplayName = "public 與 internal結構-參數")]
+        public void PublicInternalStructParam()
+        {
+            var model = new PublicInternalStruct
+            {
+                strCol1 = "3",
+                strCol2 = "4",
+                strCol3 = "5",
+                strCol4 = "6",
+                nonCol1 = "a",
+                nonCol2 = "b",
+                nonCol3 = "c",
+                nonCol4 = "d"
+            };
+            var sqlStr = @"select * from tabA where 
+                strCol1=@strCol1 and strCol2=@strCol2 and strCol3=@strCol3 and strCol4=@strCol4 and
+                nonCol1=@nonCol1 and nonCol2=@nonCol2 and nonCol3=@nonCol3 and nonCol4=@nonCol4";
+            var command = GetCommand<SqlCommand>(sqlStr, model);
+            Assert.Equal(4, command.Parameters.Count);
+            command.Parameters
+                .Verify("strCol1", model.strCol1, DbType.String, 4000)
+                .Verify("strCol2", model.strCol2, DbType.String, 4000)
+                .Verify("strCol3", model.strCol3, DbType.String, 4000)
+                .Verify("strCol4", model.strCol4, DbType.String, 4000);
+        }
+
+        [Fact(DisplayName = "public 與 internal結構-查詢")]
+        public void PublicInternalStructQuery()
+        {
+            var model = QueryData<PublicInternalStruct>("select 'a' strCol1, 'b' strCol2, 'c' strCol3, 'd' strCol4, 'a1' nonCol1, 'a2' nonCol2, 'a3' nonCol3, 'a4' nonCol4");
+            Assert.Equal("a", model.strCol1);
+            Assert.Equal("b", model.strCol2);
+            Assert.Equal("c", model.strCol3);
+            Assert.Equal("d", model.strCol4);
+            Assert.Equal(null, model.nonCol1);
+            Assert.Equal(null, model.nonCol2);
+            Assert.Equal(null, model.nonCol3);
+            Assert.Equal(null, model.nonCol4);
+
+            model = QueryData<PublicInternalStruct>("select null strCol1, null strCol2, null strCol3, null strCol4, null nonCol1, null nonCol2, null nonCol3, null nonCol4");
+            Assert.Equal(null, model.strCol1);
+            Assert.Equal(null, model.strCol2);
+            Assert.Equal(null, model.strCol3);
+            Assert.Equal(null, model.strCol4);
+            Assert.Equal(null, model.nonCol1);
+            Assert.Equal(null, model.nonCol2);
+            Assert.Equal(null, model.nonCol3);
+            Assert.Equal(null, model.nonCol4);
+        }
+        #endregion
+
 
         #region EnumMapping
         public enum StringEnum
@@ -269,11 +380,6 @@ namespace Framework.Test
             Assert.Equal(null, model.strCol);
             Assert.Equal(null, model.intCol);
             Assert.Equal(null, model.decimalCol);
-
-            /*
-            var model = QueryData<NullableModel>("select null intCol");
-            Assert.Equal(null, model.intCol);
-            */
         }
         #endregion
 
@@ -292,8 +398,8 @@ namespace Framework.Test
             public decimal? decimalCol;
         }
 
-        [Fact(DisplayName = "NullMapping")]
-        public void NullMapping()
+        [Fact(DisplayName = "NullMapping-參數")]
+        public void NullMappingParam()
         {
             var model = new NullMappingModel();
             var sqlStr = @"select * from tabA where norEnum=@norEnum and strEnum=@strEnum and strCol=@strCol and intCol=@intCol and decimalCol=@decimalCol";
@@ -305,6 +411,31 @@ namespace Framework.Test
                 .Verify("strCol", 2D, DbType.Double)
                 .Verify("intCol", 3L, DbType.Int64)
                 .Verify("decimalCol", 1, DbType.Int32);
+        }
+
+        [Fact(DisplayName = "NullMapping-查詢")]
+        public void NullMappingQuery()
+        {
+            var model = QueryData<NullMappingModel>("select 3 norEnum, 'cc' strEnum, '4' strCol, 10 intCol, 5 decimalCol");
+            Assert.Equal(NormalEnum.C, model.norEnum);
+            Assert.Equal(StringEnum.C, model.strEnum);
+            Assert.Equal("4", model.strCol);
+            Assert.Equal(10, model.intCol);
+            Assert.Equal(5, model.decimalCol);
+
+            model = QueryData<NullMappingModel>("select 'A' norEnum, 10 strEnum, 2 strCol, 3 intCol, 1 decimalCol");
+            Assert.Equal(null, model.norEnum);
+            Assert.Equal(null, model.strEnum);
+            Assert.Equal(null, model.strCol);
+            Assert.Equal(null, model.intCol);
+            Assert.Equal(null, model.decimalCol);
+
+            model = QueryData<NullMappingModel>("select null norEnum, null strEnum, null strCol, null intCol, null decimalCol");
+            Assert.Equal(null, model.norEnum);
+            Assert.Equal(null, model.strEnum);
+            Assert.Equal(null, model.strCol);
+            Assert.Equal(null, model.intCol);
+            Assert.Equal(null, model.decimalCol);
         }
         #endregion
 
@@ -386,21 +517,17 @@ namespace Framework.Test
         }
         #endregion
 
-
-        [Fact(DisplayName = "aaaa")]
-        public void aaaaa()
+        #region 單值查詢
+        [Fact(DisplayName = "單值查詢")]
+        public void QueryValue()
         {
-            var sqlStr = @"select 
-'A' as norEnum,
-'bb' as strEnum,
-'1' as strCol,
-null as intCol,
-10 as decimalCol
-";
-            using (var conn = DbHelper.OpenConnection("test.local"))
-            {
-                var aa = conn.Query<NullMappingModel>(sqlStr).ToList();
-            }
+            Assert.Equal(3, QueryData<int>("select 3"));
+            Assert.Equal("aaa", QueryData<string>("select 'aaa'"));
+            Assert.Equal('a', QueryData<char>("select 'a'"));
+            Assert.Equal(null, QueryData<int?>("select null"));
+            Assert.Equal(NormalEnum.B, QueryData<NormalEnum>("select 2"));
+            Assert.Equal(NormalEnum.B, QueryData<NormalEnum>("select 'B'"));
         }
+        #endregion
     }
 }

@@ -44,7 +44,7 @@ namespace Framework.Data
             {
 
                 var deserializerBuilder = new ModelWrapper.DeserializerBuilder();
-                var typeDeserializer = deserializerBuilder.GetTypeDeserializer(typeof(T), reader);
+                var typeDeserializer = deserializerBuilder.GetDeserializer(typeof(T), reader);
 
                 var buff = new List<T>();
                 while (reader.Read())

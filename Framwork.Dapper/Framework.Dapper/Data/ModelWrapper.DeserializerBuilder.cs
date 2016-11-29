@@ -164,7 +164,36 @@ namespace Framework.Data
                 return (T)Enum.Parse(typeof(T), value, true);
             }
 
-            public Func<IDataReader, object> GetTypeDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)
+            public Func<IDataReader, object> GetDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)
+            {
+                if (type == typeof(object)) return Reflect.Dapper.GetDapperRowDeserializer(reader, startBound, length, returnNullIfFirstMissing);
+                var nullableType = type.IsValueType ? null : Nullable.GetUnderlyingType(type);
+                var effectiveType = nullableType ?? type;
+                if (Reflect.Dapper.typeMap.ContainsKey(type) || type.FullName == Reflect.Dapper.LinqBinary) 
+                    return Reflect.Dapper.GetStructDeserializer(type, effectiveType, startBound);
+                if (effectiveType.IsEnum)
+                {
+                    object enumNullValue;
+                    var fromValueToEnum = EnumValueHelper.GetEnumGetterMethod(effectiveType, out enumNullValue);
+                    if (fromValueToEnum == null) return Reflect.Dapper.GetStructDeserializer(type, effectiveType, startBound);
+
+                    if (reader.GetFieldType(startBound) == typeof(string))
+                    {
+                        return r =>
+                        {
+                            
+                        }
+                    }
+
+                    // r => fromValueToEnum(r.GetValue(startBound))
+                    var expParmeter = Expression.Parameter(typeof(IDataReader));
+                    var expBody = Expression.Call(fromValueToEnum, Expression.Call(expParmeter, typeof(IDataReader).GetMethod(nameof(IDataReader.GetValue)),new[] { Expression.Constant(startBound) }));
+                    return Expression.Lambda<Func<IDataReader, object>>(expBody, new[] { expParmeter }).Compile();
+                }
+                return GetTypeDeserializer(type, reader, startBound, length, returnNullIfFirstMissing);
+            }
+
+            private Func<IDataReader, object> GetTypeDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)
             {
                 var returnType = type.IsValueType ? typeof(object) : type;
 
@@ -197,15 +226,9 @@ namespace Framework.Data
                 }
 
                 var names = Enumerable.Range(startBound, length).Select(i => reader.GetName(i)).ToArray();
-
-                //ITypeMap typeMap = GetTypeMap(type);
-
                 int index = startBound;
-
                 ConstructorInfo specializedConstructor = null;
-
                 bool supportInitialize = false;
-                //Dictionary<Type, LocalBuilder> structLocals = null; //存放已定義的區域變數
 
                 if (type.IsValueType)
                 {
@@ -355,7 +378,10 @@ namespace Framework.Data
                         {
                             il.Emit(OpCodes.Dup); // stack is now [target][target][value][value]
                             il.EmitCall(OpCodes.Callvirt, typeof(object).GetMethod(nameof(object.ToString)), null);     // stack is now [target][target][value][value-text]
-                            il.EmitConstant(item.NullMapping.ToString());   // stack is now [target][target][value][value-ToString][NullMapping-text]
+                            //如果欄位非文字, 且NullMapping是Enum的話, 用數字判斷
+                            var nullMappingEnum = colType == typeof(string) ? null : item.NullMapping as Enum;
+                            var nullMappingText = nullMappingEnum?.ToString("D") ?? item.NullMapping.ToString();
+                            il.EmitConstant(nullMappingText);   // stack is now [target][target][value][value-ToString][NullMapping-text]
                             il.EmitCall(OpCodes.Call, Reflect.String_Equals, null); // stack is now [target][target][value][bool]
                             il.Emit(OpCodes.Brtrue_S, isDbNullLabel); // stack is now [target][target][value]
                         }

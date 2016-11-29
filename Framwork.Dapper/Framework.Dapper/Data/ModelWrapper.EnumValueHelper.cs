@@ -25,6 +25,7 @@ namespace Framework.Data
                 internal readonly MethodInfo nullEnumToValue;  //nullable<enum> 轉 value
                 internal readonly MethodInfo nullEnumsToValues; //nullable<enum>s 轉 values
                 internal readonly MethodInfo valueToEnum;   //value 轉 enum
+                internal readonly MethodInfo valueToNullEnum;   //value 轉 enum?
 
                 protected EnumHandlerBase(Type enumType, Type valueUnderlyingType, Type enumCacheType)
                 {
@@ -47,6 +48,7 @@ namespace Framework.Data
                         nullEnumsToValues = enumCacheType.GetMethod(nameof(EnumHandlerCache<int>.NullEnumsToClassValues)).MakeGenericMethod(valueUnderlyingType);
                     }
                     valueToEnum = enumCacheType.GetMethod(nameof(EnumHandlerCache<int>.ValueToEnum));
+                    valueToNullEnum = enumCacheType.GetMethod(nameof(EnumHandlerCache<int>.ValueToNullEnum));
                 }
 
                 public abstract void SetValue(IDbDataParameter parameter, object value);
@@ -97,8 +99,9 @@ namespace Framework.Data
 
                 public override object Parse(Type destinationType, object value)
                 {
+                    if (nullValue.HasValue && (value == null || value == DBNull.Value)) return nullValue.Value;
                     TEnum val;
-                    return toEnumMap.TryGetValue((TValue)value, out val) ? val : default(TEnum);
+                    return toEnumMap.TryGetValue((TValue)value, out val) ? val : (object)null;
                 }
 
                 public override void SetValue(IDbDataParameter parameter, object vEnum)
@@ -169,7 +172,16 @@ namespace Framework.Data
                 #region value to enum
                 public static TEnum ValueToEnum(object value)
                 {
-                    return (TEnum)Handler.Parse(typeof(TEnum), value);
+                    var enumValue = Handler.Parse(typeof(TEnum), value);
+                    if (enumValue == null) throw new Exception($"{value}無法轉型為{typeof(TEnum)}");
+                    return (TEnum)enumValue;
+                }
+
+                public static TEnum? ValueToNullEnum(object value)
+                {
+                    var enumValue = Handler.Parse(typeof(TEnum), value);
+                    if (enumValue == null) return null;
+                    return (TEnum)enumValue;
                 }
                 #endregion
             }
@@ -247,7 +259,7 @@ namespace Framework.Data
                 bool isNullableEnum;
                 var handler = GetHandler(memberType, out isNullableEnum);
                 nullValue = handler?.NullValue;
-                return handler?.valueToEnum;
+                return isNullableEnum ? handler?.valueToNullEnum : handler?.valueToEnum;
             }
 
             /// <summary>取得 Enum 或 Enum? 轉成 Value 的MethodInfo。</summary>

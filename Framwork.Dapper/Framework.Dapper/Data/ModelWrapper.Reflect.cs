@@ -56,8 +56,12 @@ namespace Framework.Data
                 internal static readonly Action<ILGenerator, int> StoreLocal;
                 internal static readonly Action<ILGenerator, int> LoadLocal;
                 internal static readonly Action<ILGenerator, Type, Type, Type> FlexibleConvertBoxedFromHeadOfStack;
+                internal static readonly Func<IDataRecord, int, int, bool, Func<IDataReader, object>> GetDapperRowDeserializer;
+                internal static readonly Func<Type, Type, int, Func<IDataReader, object>> GetStructDeserializer;
                 //Dapper.DynamicParameters
                 internal static readonly DbType EnumerableMultiParameter;
+
+                private static Func<Dictionary<Type, DbType>> getTypeMap = Expression.Lambda<Func<Dictionary<Type, DbType>>>(Expression.Field(null, typeof(SqlMapper).GetField("typeMap", BindingFlags.Static | BindingFlags.NonPublic))).Compile();
 
 
                 static Dapper()
@@ -71,8 +75,15 @@ namespace Framework.Data
                     InternalHelper.WrapMethod(typeof(SqlMapper), "StoreLocal", out StoreLocal);
                     InternalHelper.WrapMethod(typeof(SqlMapper), "LoadLocal", out LoadLocal);
                     InternalHelper.WrapMethod(typeof(SqlMapper), "FlexibleConvertBoxedFromHeadOfStack", out FlexibleConvertBoxedFromHeadOfStack);
+                    InternalHelper.WrapMethod(typeof(SqlMapper), "GetDapperRowDeserializer", out GetDapperRowDeserializer);
+                    InternalHelper.WrapMethod(typeof(SqlMapper), "GetStructDeserializer", out GetStructDeserializer);
 
                     InternalHelper.WrapField(typeof(global::Dapper.DynamicParameters), "EnumerableMultiParameter", out EnumerableMultiParameter);
+                }
+
+                internal static Dictionary<Type, DbType> typeMap
+                {
+                    get { return getTypeMap(); }
                 }
 
 
@@ -110,6 +121,7 @@ namespace Framework.Data
                 {
                     return Type.GetTypeCode(type);
                 }
+
 
             }
 

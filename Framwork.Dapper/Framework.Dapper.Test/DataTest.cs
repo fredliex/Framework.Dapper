@@ -527,6 +527,8 @@ namespace Framework.Test
             Assert.Equal(null, QueryData<int?>("select null"));
             Assert.Equal(NormalEnum.B, QueryData<NormalEnum>("select 2"));
             Assert.Equal(NormalEnum.B, QueryData<NormalEnum>("select 'B'"));
+            Assert.Throws<Exception>(() => QueryData<NormalEnum>("select convert(varchar, null)"));
+            Assert.Equal(null, QueryData<NormalEnum?>("select convert(varchar, null)"));
         }
         #endregion
     }

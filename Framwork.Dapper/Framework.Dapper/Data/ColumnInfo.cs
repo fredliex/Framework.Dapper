@@ -61,7 +61,6 @@ namespace Framework.Data
         private sealed class FieldColumnInfo : ColumnInfo
         {
             private FieldInfo member;
-            private OpCode callOpCode;
             internal override MemberInfo Member { get { return member; } }
             internal override MemberTypes MemberType { get { return MemberTypes.Field; } }
 

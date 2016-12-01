@@ -30,6 +30,10 @@ namespace Framework.Data
 
         internal static object WrapParam(object param, CommandType commandType, string sql)
         {
+
+            //傳入參數 依照commandType + sql + conn + param.GetType() 當作識別key
+
+
             if (param == null || param is IDynamicParameters) return param;
 
             //DynamicParameters的話就回wrapper

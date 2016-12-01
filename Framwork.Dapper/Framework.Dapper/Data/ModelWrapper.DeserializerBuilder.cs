@@ -93,7 +93,7 @@ namespace Framework.Data
                 return GetTypeDeserializer(type, reader, startBound, length, returnNullIfFirstMissing);
             }
 
-            private Func<IDataReader, object> GetTypeDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)
+            private static Func<IDataReader, object> GetTypeDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)
             {
                 var returnType = type.IsValueType ? typeof(object) : type;
 

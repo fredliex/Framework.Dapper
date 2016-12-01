@@ -54,6 +54,9 @@
     <Compile Include="Data\IDbHook.cs" />
     <Compile Include="Data\IModel.cs" />
     <Compile Include="Data\InternalHelper.cs" />
+    <Compile Include="Data\ModelWrapper.Cache.cs">
+      <DependentUpon>ModelWrapper.cs</DependentUpon>
+    </Compile>
     <Compile Include="Data\ModelWrapper.cs" />
     <Compile Include="Data\ModelWrapper.DeserializerBuilder.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>

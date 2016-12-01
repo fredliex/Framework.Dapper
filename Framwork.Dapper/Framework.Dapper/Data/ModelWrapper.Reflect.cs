@@ -17,7 +17,7 @@ namespace Framework.Data
 {
     partial class ModelWrapper
     {
-        private static class Reflect
+        internal static class Reflect
         {
             internal static readonly MethodInfo IDbCommand_Parameters_Get = typeof(IDbCommand).GetProperty(nameof(IDbCommand.Parameters)).GetGetMethod();
             internal static readonly MethodInfo IDbCommand_CreateParameter = typeof(IDbCommand).GetMethod(nameof(IDbCommand.CreateParameter));
@@ -58,9 +58,14 @@ namespace Framework.Data
                 internal static readonly Action<ILGenerator, Type, Type, Type> FlexibleConvertBoxedFromHeadOfStack;
                 internal static readonly Func<IDataRecord, int, int, bool, Func<IDataReader, object>> GetDapperRowDeserializer;
                 internal static readonly Func<Type, Type, int, Func<IDataReader, object>> GetStructDeserializer;
+
                 //Dapper.DynamicParameters
                 internal static readonly DbType EnumerableMultiParameter;
 
+                //Dapper.SqlMapper.Identity
+                internal static readonly Func<string, CommandType?, IDbConnection, Type, Type, Type[], SqlMapper.Identity> NewIdentity;
+
+                //其他
                 private static Func<Dictionary<Type, DbType>> getTypeMap = Expression.Lambda<Func<Dictionary<Type, DbType>>>(Expression.Field(null, typeof(SqlMapper).GetField("typeMap", BindingFlags.Static | BindingFlags.NonPublic))).Compile();
 
 
@@ -79,6 +84,8 @@ namespace Framework.Data
                     InternalHelper.WrapMethod(typeof(SqlMapper), "GetStructDeserializer", out GetStructDeserializer);
 
                     InternalHelper.WrapField(typeof(global::Dapper.DynamicParameters), "EnumerableMultiParameter", out EnumerableMultiParameter);
+
+                    InternalHelper.WrapConstructor(out NewIdentity);
                 }
 
                 internal static Dictionary<Type, DbType> typeMap

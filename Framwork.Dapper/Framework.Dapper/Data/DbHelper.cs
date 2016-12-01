@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -15,6 +16,8 @@ namespace Framework.Data
     /// </summary>
     public static class DbHelper
     {
+
+
         /// <summary>
         /// 
         /// </summary>
@@ -38,11 +41,14 @@ namespace Framework.Data
 
         public static IEnumerable<T> Query<T>(this IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null, bool buffered = true, int? commandTimeout = null, CommandType? commandType = null)
         {
+            //依照commandType + sql + conn + param.GetType() + T 當作識別key
+            var identity = ModelWrapper.Reflect.Dapper.NewIdentity(sql, commandType, conn, typeof(T), param?.GetType(), null);
+
+
             var paramWrapper = ModelWrapper.WrapParam(param, commandType ?? CommandType.Text, sql);
             var commandDefinition = new CommandDefinition(sql, paramWrapper, transaction, commandTimeout, commandType, CommandFlags.Buffered);
             using (var reader = SqlMapper.ExecuteReader(conn, commandDefinition, CommandBehavior.SequentialAccess | CommandBehavior.SingleResult))
             {
-
                 var deserializerBuilder = new ModelWrapper.DeserializerBuilder();
                 var typeDeserializer = deserializerBuilder.GetDeserializer(typeof(T), reader);
 

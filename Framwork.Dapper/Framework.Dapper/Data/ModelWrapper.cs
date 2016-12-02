@@ -28,28 +28,31 @@ namespace Framework.Data
             return tableInfoCache.GetOrAdd(modelType, t => new TableInfo(t));
         }
 
-        internal static object WrapParam(object param, CommandType commandType, string sql)
+        internal static object WrapParam(IDbConnection conn, object param, CommandType commandType, string sql, out Cache cache)
         {
+            var paramType = param?.GetType();
 
             //傳入參數 依照commandType + sql + conn + param.GetType() 當作識別key
+            cache = Cache.GetCache(conn, commandType, sql, paramType, () =>
+            {
+                //沒參數或是IDynamicParameters的話, 不包裝
+                if (param == null || param is IDynamicParameters) return p => p;
 
+                //DynamicParameters的話就回wrapper
+                if (param is DynamicParameters) return p => ((DynamicParameters)p).Wrapper;
 
-            if (param == null || param is IDynamicParameters) return param;
+                //Dictionary<string, object>的話丟給DynamicParameters處理
+                if (param is IEnumerable<KeyValuePair<string, object>>) return p => new DynamicParameters(p).Wrapper;
 
-            //DynamicParameters的話就回wrapper
-            var dynamicParameters = param as DynamicParameters;
-            if (dynamicParameters != null) return dynamicParameters.Wrapper;
+                //由ParamWrapper處理
+                var paramGeneratorBuilder = new ParamGeneratorBuilder(paramType, commandType, sql, false);
+                var paramGenerator = paramGeneratorBuilder.CreateGenerator();
+                if (param is IEnumerable && !(param is string || param is IEnumerable<KeyValuePair<string, object>>))
+                    return p => new EnumerableParamWrapper((IEnumerable)p, paramGenerator);
+                return p => new ParamWrapper { Model = p, ParamGenerator = paramGenerator };
+            });
 
-            //Dictionary<string, object>的話丟給DynamicParameters處理
-            var dict = param as IEnumerable<KeyValuePair<string, object>>;
-            if (dict != null) return new DynamicParameters(dict).Wrapper;
-
-            //由ParamWrapper處理
-            var paramGeneratorBuilder = new ParamGeneratorBuilder(param.GetType(), commandType, sql, false);
-            var paramGenerator = paramGeneratorBuilder.CreateGenerator();
-            var models = param as IEnumerable;
-            if (models != null && !(param is string || param is IEnumerable<KeyValuePair<string, object>>)) return new EnumerableParamWrapper(models, paramGenerator);
-            return new ParamWrapper { Model = param, ParamGenerator = paramGenerator };
+            return cache.ParamWrapper(param);
         }
         
     }

@@ -22,8 +22,8 @@ namespace Framework.Test
             command.CommandText = sql;
             command.Connection = new SqlConnection();
 
-
-            var tmpParam = ModelWrapper.WrapParam(param, CommandType.Text, command.CommandText);
+            ModelWrapper.Cache cache;
+            var tmpParam = ModelWrapper.WrapParam(command.Connection, param, CommandType.Text, command.CommandText, out cache);
             var dynamicParameters = tmpParam as DynamicParameters.DynamicParametersWrapper;
             if (dynamicParameters != null)
             {

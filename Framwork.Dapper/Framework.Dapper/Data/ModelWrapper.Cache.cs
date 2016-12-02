@@ -11,14 +11,19 @@ namespace Framework.Data
 {
     partial class ModelWrapper
     {
-        internal sealed class Cahce
+        internal sealed class Cache
         {
-            private static ConcurrentDictionary<SqlMapper.Identity, Cahce> cache;
+            #region static 
+            private static ConcurrentDictionary<SqlMapper.Identity, Cache> storage = new ConcurrentDictionary<SqlMapper.Identity, Cache>();
+            public static Cache GetCache(IDbConnection conn, CommandType commandType, string commandText, Type paramType, Func<Func<object, object>> paramWrapperGetter)
+            {
+                var identity = ModelWrapper.Reflect.Dapper.NewIdentity(commandText, commandType, conn, paramType, paramType, null);
+                return storage.GetOrAdd(identity, x => new Cache { ParamWrapper = paramWrapperGetter() });
+            }
+            #endregion
 
-            public Action<IDbCommand, object> ParamReader;
-            public ConcurrentDictionary<Type, Func<IDataReader, object>> Deserializers;
+            public Func<object, object> ParamWrapper { get; private set; }
+            public readonly ConcurrentDictionary<Type, Func<IDataReader, object>> Deserializers = new ConcurrentDictionary<Type, Func<IDataReader, object>>();
         }
-
-
     }
 }

@@ -76,9 +76,6 @@
     <Compile Include="Data\ModelWrapper.Reflect.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
-    <Compile Include="Data\ModelWrapper._ToModel.cs">
-      <DependentUpon>ModelWrapper.cs</DependentUpon>
-    </Compile>
     <Compile Include="Data\NonColumnAttribute.cs" />
     <Compile Include="Data\TableAttribute.cs" />
     <Compile Include="Data\TableInfo.cs" />

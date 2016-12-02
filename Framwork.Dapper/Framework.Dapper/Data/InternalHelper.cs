@@ -44,8 +44,8 @@ namespace Framework.Data
         internal static void WrapConstructor<T>(out T lambda)
         {
             var parmeterTypes = typeof(T).GetGenericArguments();
-            parmeterTypes = parmeterTypes.Take(parmeterTypes.Length - 1).ToArray();
             var type = parmeterTypes.Last();
+            parmeterTypes = parmeterTypes.Take(parmeterTypes.Length - 1).ToArray();
             var constructor = type.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, parmeterTypes, null);
             var parmeters = parmeterTypes.Select((p, i) => Expression.Parameter(p, "p" + i)).ToArray();
             var body = Expression.New(constructor, parmeters);

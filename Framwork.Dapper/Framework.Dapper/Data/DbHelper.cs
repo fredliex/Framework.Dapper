@@ -16,8 +16,6 @@ namespace Framework.Data
     /// </summary>
     public static class DbHelper
     {
-
-
         /// <summary>
         /// 
         /// </summary>
@@ -39,26 +37,39 @@ namespace Framework.Data
             return conn;
         }
 
+        public static IEnumerable<dynamic> Query(this IDbConnection cnn, string sql, object param = null, IDbTransaction transaction = null, bool buffered = true, int? commandTimeout = null, CommandType? commandType = null)
+        {
+            return Query<object>(cnn, sql, param as object, transaction, buffered, commandTimeout, commandType);
+        }
+
         public static IEnumerable<T> Query<T>(this IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null, bool buffered = true, int? commandTimeout = null, CommandType? commandType = null)
         {
-            //依照commandType + sql + conn + param.GetType() + T 當作識別key
-            var identity = ModelWrapper.Reflect.Dapper.NewIdentity(sql, commandType, conn, typeof(T), param?.GetType(), null);
+            var datas = QueryImp<T>(conn, sql, param, transaction, buffered, commandTimeout, commandType ?? CommandType.Text);
+            return buffered ? datas.ToList() : datas;
+        }
 
-
-            var paramWrapper = ModelWrapper.WrapParam(param, commandType ?? CommandType.Text, sql);
+        private static IEnumerable<T> QueryImp<T>(this IDbConnection conn, string sql, object param, IDbTransaction transaction, bool buffered, int? commandTimeout, CommandType commandType)
+        {
+            ModelWrapper.Cache cache;
+            var paramWrapper = ModelWrapper.WrapParam(conn, param, commandType, sql, out cache);
             var commandDefinition = new CommandDefinition(sql, paramWrapper, transaction, commandTimeout, commandType, CommandFlags.Buffered);
             using (var reader = SqlMapper.ExecuteReader(conn, commandDefinition, CommandBehavior.SequentialAccess | CommandBehavior.SingleResult))
             {
-                var deserializerBuilder = new ModelWrapper.DeserializerBuilder();
-                var typeDeserializer = deserializerBuilder.GetDeserializer(typeof(T), reader);
-
-                var buff = new List<T>();
+                var typeDeserializer = cache.Deserializers.GetOrAdd(typeof(T), t => ModelWrapper.DeserializerBuilder.GetDeserializer(t, reader));
                 while (reader.Read())
                 {
-                    buff.Add((T)typeDeserializer(reader));
+                    yield return (T)typeDeserializer(reader);
                 }
-                return buff;
             }
+        }
+
+        public static int Execute(this IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null, int? commandTimeout = null, CommandType? commandType = null)
+        {
+            var cmdType = commandType ?? CommandType.Text;
+            ModelWrapper.Cache cache;
+            var paramWrapper = ModelWrapper.WrapParam(conn, param, cmdType, sql, out cache);
+            var commandDefinition = new CommandDefinition(sql, paramWrapper, transaction, commandTimeout, cmdType, CommandFlags.Buffered);
+            return SqlMapper.Execute(conn, commandDefinition);
         }
     }
 }

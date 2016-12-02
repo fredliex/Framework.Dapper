@@ -19,9 +19,7 @@ namespace Framework.Data
 {
     partial class ModelWrapper
     {
-
-
-        internal sealed class DeserializerBuilder
+        internal static class DeserializerBuilder
         {
             private static readonly MethodInfo getItem = typeof(IDataRecord).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                         .Where(p => p.GetIndexParameters().Any() && p.GetIndexParameters()[0].ParameterType == typeof(int))
@@ -36,7 +34,7 @@ namespace Framework.Data
                 return str.Trim(' ');
             }
 
-            private char ReadChar(object value)
+            private static char ReadChar(object value)
             {
                 string s = value as string;
                 if (s == null || s.Length != 1) throw new ArgumentException("A single-character was expected", nameof(value));
@@ -65,7 +63,7 @@ namespace Framework.Data
             }
 
 
-            public Func<IDataReader, object> GetDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)
+            public static Func<IDataReader, object> GetDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)
             {
                 if (type == typeof(object)) return Reflect.Dapper.GetDapperRowDeserializer(reader, startBound, length, returnNullIfFirstMissing);
                 var nullableType = type.IsValueType ? Nullable.GetUnderlyingType(type) : null;

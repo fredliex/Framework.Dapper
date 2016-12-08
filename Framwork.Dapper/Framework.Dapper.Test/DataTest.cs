@@ -517,10 +517,46 @@ namespace Framework.Test
         }
         #endregion
 
+        private static IEqualityComparer equalityComparer = EqualityComparer<Type[]>.Default;
+
         #region 單值查詢
         [Fact(DisplayName = "單值查詢")]
         public void QueryValue()
         {
+            var node = new[] { typeof(int), typeof(int), typeof(int) };
+
+            var dictA = new HashSet<Type[]>();
+            dictA.Add(new[] { typeof(int), typeof(int), typeof(int) });
+
+            var dictB = new HashSet<int>();
+            dictB.Add(node.GetHashCode());
+
+            var dictC = new HashSet<int>();
+            dictC.Add(StructuralComparisons.StructuralEqualityComparer.GetHashCode(node));
+
+            var watch = new Stopwatch();
+
+            watch.Restart();
+            for (var i = 0; i < 10000; i++) dictA.Contains(node);
+            Trace.WriteLine(watch.ElapsedTicks);
+
+            watch.Restart();
+            for (var i = 0; i < 10000; i++)
+            {
+                var hashCode = 17;
+                foreach (var t in node)
+                {
+                    hashCode = hashCode * 23 + (t?.GetHashCode() ?? 0);
+                }
+                dictB.Contains(hashCode);
+            };
+            Trace.WriteLine(watch.ElapsedTicks);
+
+            watch.Restart();
+            for (var i = 0; i < 10000; i++) dictC.Contains(StructuralComparisons.StructuralEqualityComparer.GetHashCode(node));
+            Trace.WriteLine(watch.ElapsedTicks);
+
+            return;
             Assert.Equal(3, QueryData<int>("select 3"));
             Assert.Equal("aaa", QueryData<string>("select 'aaa'"));
             Assert.Equal('a', QueryData<char>("select 'a'"));

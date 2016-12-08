@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
@@ -55,13 +56,16 @@ namespace Framework.Data
             var commandDefinition = new CommandDefinition(sql, paramWrapper, transaction, commandTimeout, commandType, CommandFlags.Buffered);
             using (var reader = SqlMapper.ExecuteReader(conn, commandDefinition, CommandBehavior.SequentialAccess | CommandBehavior.SingleResult))
             {
-                var typeDeserializer = cache.Deserializers.GetOrAdd(typeof(T), t => ModelWrapper.DeserializerBuilder.GetDeserializer(t, reader));
+                var resultType = typeof(T);
+                var typeDeserializer = cache.GetOrAddDeserializer(new[] { resultType }, x => ModelWrapper.DeserializerBuilder.GetDeserializer(resultType, reader));
                 while (reader.Read())
                 {
                     yield return (T)typeDeserializer(reader);
                 }
             }
         }
+
+
 
         public static int Execute(this IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null, int? commandTimeout = null, CommandType? commandType = null)
         {

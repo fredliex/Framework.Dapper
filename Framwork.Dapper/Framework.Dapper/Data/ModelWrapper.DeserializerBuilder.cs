@@ -21,6 +21,9 @@ namespace Framework.Data
     {
         internal static class DeserializerBuilder
         {
+            //仿dapper, 空物件, 用來定義沒對應的型別
+            internal sealed class DontMap { }
+
             private static readonly MethodInfo getItem = typeof(IDataRecord).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                         .Where(p => p.GetIndexParameters().Any() && p.GetIndexParameters()[0].ParameterType == typeof(int))
                         .Select(p => p.GetGetMethod()).First();
@@ -62,8 +65,69 @@ namespace Framework.Data
                 return Enum.Parse(type, value, false);
             }
 
+            internal static List<Func<IDataReader, object>> GetDeserializers(Type[] types, string splitOn, IDataReader reader)
+            {
+                // 仿dapper裡面的GenerateDeserializers
+                var deserializers = new List<Func<IDataReader, object>>();
+                var splits = splitOn.Split(',').Select(s => s.Trim()).ToArray();
+                bool isMultiSplit = splits.Length > 1;
+                if (types.First() == typeof(object))
+                {
+                    // we go left to right for dynamic multi-mapping so that the madness of TestMultiMappingVariations
+                    // is supported
+                    bool first = true;
+                    int currentPos = 0;
+                    int splitIdx = 0;
+                    string currentSplit = splits[splitIdx];
+                    foreach (var type in types)
+                    {
+                        if (type == typeof(DontMap)) break;
 
-            public static Func<IDataReader, object> GetDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)
+                        int splitPoint = GetNextSplitDynamic(currentPos, currentSplit, reader);
+                        if (isMultiSplit && splitIdx < splits.Length - 1)
+                        {
+                            currentSplit = splits[++splitIdx];
+                        }
+                        deserializers.Add((GetDeserializer(type, reader, currentPos, splitPoint - currentPos, !first)));
+                        currentPos = splitPoint;
+                        first = false;
+                    }
+                }
+                else
+                {
+                    // in this we go right to left through the data reader in order to cope with properties that are
+                    // named the same as a subsequent primary key that we split on
+                    int currentPos = reader.FieldCount;
+                    int splitIdx = splits.Length - 1;
+                    var currentSplit = splits[splitIdx];
+                    for (var typeIdx = types.Length - 1; typeIdx >= 0; --typeIdx)
+                    {
+                        var type = types[typeIdx];
+                        if (type == typeof(DontMap))
+                        {
+                            continue;
+                        }
+
+                        int splitPoint = 0;
+                        if (typeIdx > 0)
+                        {
+                            splitPoint = GetNextSplit(currentPos, currentSplit, reader);
+                            if (isMultiSplit && splitIdx > 0)
+                            {
+                                currentSplit = splits[--splitIdx];
+                            }
+                        }
+
+                        deserializers.Add((GetDeserializer(type, reader, splitPoint, currentPos - splitPoint, typeIdx > 0)));
+                        currentPos = splitPoint;
+                    }
+
+                    deserializers.Reverse();
+                }
+                return deserializers;
+            }
+
+            internal static Func<IDataReader, object> GetDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)
             {
                 if (type == typeof(object)) return Reflect.Dapper.GetDapperRowDeserializer(reader, startBound, length, returnNullIfFirstMissing);
                 var nullableType = type.IsValueType ? Nullable.GetUnderlyingType(type) : null;

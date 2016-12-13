@@ -65,9 +65,9 @@ namespace Framework.Data
                 return Enum.Parse(type, value, false);
             }
 
+            // 仿dapper裡面的GenerateDeserializers
             internal static List<Func<IDataReader, object>> GetDeserializers(Type[] types, string splitOn, IDataReader reader)
             {
-                // 仿dapper裡面的GenerateDeserializers
                 var deserializers = new List<Func<IDataReader, object>>();
                 var splits = splitOn.Split(',').Select(s => s.Trim()).ToArray();
                 bool isMultiSplit = splits.Length > 1;
@@ -75,19 +75,16 @@ namespace Framework.Data
                 {
                     // we go left to right for dynamic multi-mapping so that the madness of TestMultiMappingVariations
                     // is supported
-                    bool first = true;
-                    int currentPos = 0;
-                    int splitIdx = 0;
-                    string currentSplit = splits[splitIdx];
+                    bool first = true;  //是否為第一個type
+                    int currentPos = 0; //目前欄位索引
+                    int splitIdx = 0;   //type切割欄位索引
+                    string currentSplit = splits[splitIdx]; //type切割欄位名稱
                     foreach (var type in types)
                     {
                         if (type == typeof(DontMap)) break;
 
-                        int splitPoint = GetNextSplitDynamic(currentPos, currentSplit, reader);
-                        if (isMultiSplit && splitIdx < splits.Length - 1)
-                        {
-                            currentSplit = splits[++splitIdx];
-                        }
+                        int splitPoint = Reflect.Dapper.GetNextSplitDynamic(currentPos, currentSplit, reader);     //取得下一個切割欄位索引
+                        if (isMultiSplit && splitIdx < splits.Length - 1) currentSplit = splits[++splitIdx];
                         deserializers.Add((GetDeserializer(type, reader, currentPos, splitPoint - currentPos, !first)));
                         currentPos = splitPoint;
                         first = false;
@@ -103,25 +100,18 @@ namespace Framework.Data
                     for (var typeIdx = types.Length - 1; typeIdx >= 0; --typeIdx)
                     {
                         var type = types[typeIdx];
-                        if (type == typeof(DontMap))
-                        {
-                            continue;
-                        }
+                        if (type == typeof(DontMap)) continue; 
 
                         int splitPoint = 0;
                         if (typeIdx > 0)
                         {
-                            splitPoint = GetNextSplit(currentPos, currentSplit, reader);
-                            if (isMultiSplit && splitIdx > 0)
-                            {
-                                currentSplit = splits[--splitIdx];
-                            }
+                            splitPoint = Reflect.Dapper.GetNextSplit(currentPos, currentSplit, reader);
+                            if (isMultiSplit && splitIdx > 0) currentSplit = splits[--splitIdx];
                         }
 
                         deserializers.Add((GetDeserializer(type, reader, splitPoint, currentPos - splitPoint, typeIdx > 0)));
                         currentPos = splitPoint;
                     }
-
                     deserializers.Reverse();
                 }
                 return deserializers;

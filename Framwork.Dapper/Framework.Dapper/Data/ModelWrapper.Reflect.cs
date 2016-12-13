@@ -58,6 +58,8 @@ namespace Framework.Data
                 internal static readonly Action<ILGenerator, Type, Type, Type> FlexibleConvertBoxedFromHeadOfStack;
                 internal static readonly Func<IDataRecord, int, int, bool, Func<IDataReader, object>> GetDapperRowDeserializer;
                 internal static readonly Func<Type, Type, int, Func<IDataReader, object>> GetStructDeserializer;
+                internal static readonly Func<int, string, IDataReader, int> GetNextSplitDynamic;
+                internal static readonly Func<int, string, IDataReader, int> GetNextSplit;
 
                 //Dapper.DynamicParameters
                 internal static readonly DbType EnumerableMultiParameter;
@@ -82,6 +84,8 @@ namespace Framework.Data
                     InternalHelper.WrapMethod(typeof(SqlMapper), "FlexibleConvertBoxedFromHeadOfStack", out FlexibleConvertBoxedFromHeadOfStack);
                     InternalHelper.WrapMethod(typeof(SqlMapper), "GetDapperRowDeserializer", out GetDapperRowDeserializer);
                     InternalHelper.WrapMethod(typeof(SqlMapper), "GetStructDeserializer", out GetStructDeserializer);
+                    InternalHelper.WrapMethod(typeof(SqlMapper), "GetNextSplitDynamic", out GetNextSplitDynamic);
+                    InternalHelper.WrapMethod(typeof(SqlMapper), "GetNextSplit", out GetNextSplit);
 
                     InternalHelper.WrapField(typeof(global::Dapper.DynamicParameters), "EnumerableMultiParameter", out EnumerableMultiParameter);
 

@@ -23,8 +23,8 @@ namespace Framework.Data
             #endregion
 
             public Func<object, object> ParamWrapper { get; private set; }
-            private readonly ConcurrentDictionary<int, Func<IDataReader, object>> deserializers = new ConcurrentDictionary<int, Func<IDataReader, object>>();
-            public Func<IDataReader, object> GetOrAddDeserializer(IEnumerable<Type> resultTypes, Func<IEnumerable<Type>, Func<IDataReader, object>> valueFactory)
+            private readonly ConcurrentDictionary<int, Func<IDataReader, object>[]> deserializers = new ConcurrentDictionary<int, Func<IDataReader, object>[]>();
+            public Func<IDataReader, object>[] GetOrAddDeserializer(Type[] resultTypes, Func<Type[], Func<IDataReader, object>[]> valueFactory)
             {
                 var hashCode = 17;
                 if (resultTypes != null)

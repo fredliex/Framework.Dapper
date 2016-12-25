@@ -66,7 +66,7 @@ namespace Framework.Data
             }
 
             // 仿dapper裡面的GenerateDeserializers
-            internal static List<Func<IDataReader, object>> GetDeserializers(Type[] types, string splitOn, IDataReader reader)
+            internal static Func<IDataReader, object>[] GetDeserializers(Type[] types, string splitOn, IDataReader reader)
             {
                 var deserializers = new List<Func<IDataReader, object>>();
                 var splits = splitOn.Split(',').Select(s => s.Trim()).ToArray();
@@ -114,7 +114,7 @@ namespace Framework.Data
                     }
                     deserializers.Reverse();
                 }
-                return deserializers;
+                return deserializers.ToArray();
             }
 
             internal static Func<IDataReader, object> GetDeserializer(Type type, IDataReader reader, int startBound = 0, int length = -1, bool returnNullIfFirstMissing = false)

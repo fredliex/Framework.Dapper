@@ -133,6 +133,21 @@ namespace Framework.Data
                     return Type.GetTypeCode(type);
                 }
 
+                //仿Dapper.SqlMapper.GenerateMapper
+                internal static Func<IDataReader, TReturn> GenerateMapper<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn>(Func<IDataReader, object>[] des, object map)
+                {
+                    switch (des.Length)
+                    {
+                        case 2: return r => ((Func<TFirst, TSecond,                                            TReturn>)map)((TFirst)des[0](r), (TSecond)des[1](r));
+                        case 3: return r => ((Func<TFirst, TSecond, TThird,                                    TReturn>)map)((TFirst)des[0](r), (TSecond)des[1](r), (TThird)des[2](r));
+                        case 4: return r => ((Func<TFirst, TSecond, TThird, TFourth,                           TReturn>)map)((TFirst)des[0](r), (TSecond)des[1](r), (TThird)des[2](r), (TFourth)des[3](r));
+                        case 5: return r => ((Func<TFirst, TSecond, TThird, TFourth, TFifth,                   TReturn>)map)((TFirst)des[0](r), (TSecond)des[1](r), (TThird)des[2](r), (TFourth)des[3](r), (TFifth)des[4](r));
+                        case 6: return r => ((Func<TFirst, TSecond, TThird, TFourth, TFifth, TSixth,           TReturn>)map)((TFirst)des[0](r), (TSecond)des[1](r), (TThird)des[2](r), (TFourth)des[3](r), (TFifth)des[4](r), (TSixth)des[5](r));
+                        case 7: return r => ((Func<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn>)map)((TFirst)des[0](r), (TSecond)des[1](r), (TThird)des[2](r), (TFourth)des[3](r), (TFifth)des[4](r), (TSixth)des[5](r), (TSeventh)des[6](r));
+                        default: throw new NotSupportedException();
+                    }
+                }
+
 
             }
 

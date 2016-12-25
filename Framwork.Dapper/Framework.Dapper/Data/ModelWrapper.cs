@@ -20,13 +20,6 @@ namespace Framework.Data
 
     public static partial class ModelWrapper
     {
-        private static ConcurrentDictionary<Type, TableInfo> tableInfoCache = new ConcurrentDictionary<Type, TableInfo>();
-
-        /// <summary>取得Table資訊</summary>
-        private static TableInfo GetTableInfo(Type modelType)
-        {
-            return tableInfoCache.GetOrAdd(modelType, t => new TableInfo(t));
-        }
 
         internal static object WrapParam(IDbConnection conn, object param, CommandType commandType, string sql, out Cache cache)
         {

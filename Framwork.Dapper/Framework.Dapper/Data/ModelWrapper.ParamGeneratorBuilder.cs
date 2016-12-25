@@ -108,7 +108,7 @@ namespace Framework.Data
 
             internal Action<IDbCommand, object> CreateGenerator()
             {
-                var table = GetTableInfo(modelType);
+                var table = TableInfo.Get(modelType);
 
                 il.Emit(OpCodes.Ldarg_1); // stack is now [untyped-param]
                 if (table.IsStruct)

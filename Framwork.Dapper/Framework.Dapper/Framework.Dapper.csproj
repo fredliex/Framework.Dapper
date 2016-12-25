@@ -77,6 +77,14 @@
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
     <Compile Include="Data\NonColumnAttribute.cs" />
+    <Compile Include="Data\Repository.cs" />
+    <Compile Include="Data\Repository.Paramater.cs">
+      <DependentUpon>Repository.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\Repository.ParameterMatedata.cs">
+      <DependentUpon>Repository.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\RepositoryMatedata.cs" />
     <Compile Include="Data\TableAttribute.cs" />
     <Compile Include="Data\TableInfo.cs" />
     <Compile Include="Data\ValueAttribute.cs" />

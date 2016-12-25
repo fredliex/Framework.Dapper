@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,14 @@ namespace Framework.Data
 {
     internal sealed class TableInfo
     {
+        private static ConcurrentDictionary<Type, TableInfo> cache = new ConcurrentDictionary<Type, TableInfo>();
+
+        /// <summary>取得Table資訊</summary>
+        internal static TableInfo Get(Type modelType)
+        {
+            return cache.GetOrAdd(modelType, t => new TableInfo(t));
+        }
+
         /// <summary>資料庫名稱</summary>
         public string Database { get; private set; }
 
@@ -32,7 +41,7 @@ namespace Framework.Data
         //設定為IsConcurrencyCheck的欄位序
         private int? concurrencyCheckColumnIndex = null;
 
-        internal TableInfo(Type modelType)
+        private TableInfo(Type modelType)
         {
             Type = modelType;
             IsStruct = modelType.IsValueType;
@@ -75,6 +84,11 @@ namespace Framework.Data
         {
             int colIndex;
             return columnMap.TryGetValue(columnName, out colIndex) ? Columns[colIndex] : null;
+        }
+
+        internal RepositoryMatedata GetRepositoryMatedata(object data)
+        {
+            return new RepositoryMatedata(this, data);
         }
     }
 }

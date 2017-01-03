@@ -54,7 +54,7 @@ namespace Framework.Data
         }
 
 
-        protected virtual IEnumerable<T> SelectCore(string sql, RepositoryMatedata matedata)
+        protected virtual IEnumerable<T> SelectCore(string sql, ColumnInfoCollection columns)
         {
 
         }
@@ -62,13 +62,11 @@ namespace Framework.Data
         /// <summary>依照matedata來產生sql</summary>
         /// <param name="matedata"></param>
         /// <returns></returns>
-        protected virtual string GetSelectSql(RepositoryMatedata matedata)
+        protected virtual string GetSelectSql(ColumnInfoCollection columns)
         {
             var sqlStr = $"select * from {Table}";
-            if(parameters != null)
-            
-
-            
+            //if(parameters != null)
+            throw new NotImplementedException();
         }
         #endregion
 

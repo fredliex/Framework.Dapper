@@ -49,6 +49,7 @@
     <Compile Include="Data\ColumnAttribute.cs" />
     <Compile Include="Data\ColumnBehavior.cs" />
     <Compile Include="Data\ColumnInfo.cs" />
+    <Compile Include="Data\ColumnInfoCollection.cs" />
     <Compile Include="Data\DbHelper.cs" />
     <Compile Include="Data\DynamicParameters.cs" />
     <Compile Include="Data\IDbHook.cs" />

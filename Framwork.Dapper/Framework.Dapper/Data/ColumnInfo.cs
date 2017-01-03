@@ -8,7 +8,32 @@ using System.Threading.Tasks;
 
 namespace Framework.Data
 {
-    internal abstract class ColumnInfo
+    internal sealed class ColumnInfo
+    {
+        /// <summary>成員</summary>
+        internal MemberInfo Member { get; private set; }
+
+        /// <summary>成員資料型別</summary>
+        internal Type ValueType { get; private set; }
+
+        /// <summary>是否為鍵值</summary>
+        internal bool IsKey { get; private set; } = false;
+
+        /// <summary>當設定為true時, 於update與delete時是否會檢查此欄位必須與資料庫一致</summary>
+        internal bool IsConcurrencyCheck { get; private set; } = false;
+
+        /// <summary>查詢時針對字串欄位是否去掉右邊空白。此設定僅作用於查詢時。</summary>
+        internal bool IsTrimRight { get; private set; } = false;
+
+        /// <summary>model類型為null時所對應的資料庫欄位值。若為沒對應則此屬性為null。此為雙向對應。</summary>
+        internal object NullMapping { get; private set; } = null;
+
+        internal abstract void EmitGenerateGet(ILGenerator il);
+
+        internal abstract void EmitGenerateSet(ILGenerator il);
+    }
+
+    internal abstract class ColumnInfo1
     {
         /// <summary>成員</summary>
         internal abstract MemberInfo Member { get; }

@@ -30,10 +30,10 @@ namespace Framework.Data
         internal Type Type { get; private set; }
 
         /// <summary>Model是否為struct</summary>
-        internal bool IsStructType { get; private set; }
+        internal bool IsStructModel { get; private set; }
 
         /// <summary>是否有繼承IModel</summary>
-        internal bool HasModelMark { get; private set; }
+        internal bool HasModelInterface { get; private set; }
 
         /// <summary>欄位資訊</summary>
         public ColumnInfoCollection Columns { get; private set; }
@@ -42,11 +42,11 @@ namespace Framework.Data
         private TableInfo(Type modelType)
         {
             Type = modelType;
-            IsStructType = modelType.IsValueType;
-            HasModelMark = typeof(IModel).IsAssignableFrom(modelType);
+            IsStructModel = modelType.IsValueType;
+            HasModelInterface = typeof(IModel).IsAssignableFrom(modelType);
 
             //有繼承IModel就看TableAttribute，TableAttribute忽略繼承鍊。
-            var attr = HasModelMark ? modelType.GetAttribute<TableAttribute>(false) : null;
+            var attr = HasModelInterface ? modelType.GetAttribute<TableAttribute>(false) : null;
             if (attr != null)
             {
                 Database = attr.Database;
@@ -57,7 +57,7 @@ namespace Framework.Data
             if (string.IsNullOrWhiteSpace(Schema)) Schema = null;
             if (string.IsNullOrWhiteSpace(Table)) Table = modelType.Name;
 
-            Columns = new ColumnInfoCollection(ColumnInfo.Resolve(Type, HasModelMark, IsStructType));
+            Columns = new ColumnInfoCollection(Type, HasModelInterface, IsStructModel);
         }
 
         /*

@@ -11,9 +11,52 @@ namespace Framework.Data
     {
         internal sealed class ParameterMatedata
         {
-            public string MemberName { get; private set; }
-            public bool IsMulti { get; private set; }
-            
+            public bool IsMultiParameter { get; private set; }
+            public ColumnInfoCollection Columns { get; private set; }
+
+            internal ParameterMatedata(TableInfo modelTable, object parameter)
+            {
+                var multiParams = parameter as IEnumerable;
+                if (multiParams != null)
+                {
+                    if (multiParams is string) throw new ArgumentException("參數不可為字串");
+                    IsMultiParameter = true;
+                    parameter = multiParams.Cast<object>().FirstOrDefault();
+                }
+                ColumnInfo[] columns = null;
+                if (parameter != null)
+                {
+                    var parameterType = parameter.GetType();
+                    if (parameterType == modelTable.Type)
+                    {
+                        Columns = modelTable.Columns;
+                    }
+                    else
+                    {
+                        var dict = multiParams as IEnumerable<KeyValuePair<string, object>>;
+                        if (dict == null)
+                        {
+                            var paramColumns = TableInfo.Get(parameterType).Columns;
+                        }
+
+                    }
+
+                    /*
+                    var dict = multiParams as IEnumerable<KeyValuePair<string, object>>;
+                    if (dict == null)
+                    {
+                        parameter columns = TableInfo.Get(parameter.GetType()).Columns;
+                    }
+                    else
+                    {
+                        columns = dict.Select(n => ColumnInfo
+                        {
+
+                        }).
+                    }
+                    */
+                }
+            }
 
             public static Dictionary<string, ParameterMatedata> Resolve(object parameter, TableInfo tableInfo = null)
             {

@@ -111,7 +111,7 @@ namespace Framework.Data
                 var table = TableInfo.Get(modelType);
 
                 il.Emit(OpCodes.Ldarg_1); // stack is now [untyped-param]
-                if (table.IsStructType)
+                if (table.IsStructModel)
                 {
                     il.DeclareLocal(modelType.MakePointerType());    //例如int*
                     il.Emit(OpCodes.Unbox, modelType); // stack is now [typed-param]

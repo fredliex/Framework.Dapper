@@ -5,6 +5,7 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Framework.Data.Repository;
 
 namespace Framework.Data
 {
@@ -54,7 +55,7 @@ namespace Framework.Data
         }
 
 
-        protected virtual IEnumerable<T> SelectCore(string sql, ColumnInfoCollection columns)
+        protected virtual IEnumerable<T> SelectCore(string sql, ParameterMatedata columns)
         {
 
         }

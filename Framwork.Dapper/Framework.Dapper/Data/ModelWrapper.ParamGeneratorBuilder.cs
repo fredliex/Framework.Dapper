@@ -141,7 +141,7 @@ namespace Framework.Data
                     if (typeof(ICustomQueryParameter).IsAssignableFrom(memberType))
                     {
                         il.Emit(OpCodes.Ldloc_0); // stack is now [parameters] [typed-param]
-                        column.EmitGenerateGet(il); // stack is [parameters] [custom]
+                        column.GenerateGetEmit(il); // stack is [parameters] [custom]
                         il.Emit(OpCodes.Ldarg_0); // stack is now [parameters] [custom] [command]
                         il.Emit(OpCodes.Ldstr, memberName); // stack is now [parameters] [custom] [command] [name]
                         il.EmitCall(OpCodes.Callvirt, memberType.GetMethod(nameof(ICustomQueryParameter.AddParameter)), null); // stack is now [parameters]
@@ -149,13 +149,13 @@ namespace Framework.Data
                     }
 
                     //如果是集合的話, 就處理"in", 這邊按原本Dapper邏輯處理
-                    if (dbType == Reflect.Dapper.EnumerableMultiParameter)
+                    if (column.IsEnumerableValue)
                     {
                         // this actually represents special handling for list types;
                         il.Emit(OpCodes.Ldarg_0); // stack is now [parameters] [command]
                         il.Emit(OpCodes.Ldstr, memberName); // stack is now [parameters] [command] [name]
                         il.Emit(OpCodes.Ldloc_0); // stack is now [parameters] [command] [name] [typed-param]
-                        column.EmitGenerateGet(il);  // stack is [parameters] [command] [name] [typed-value]
+                        column.GenerateGetEmit(il);  // stack is [parameters] [command] [name] [typed-value]
 
                         //有定義EnumValue的話, 做轉換處理
                         Type enumValueType;
@@ -192,7 +192,7 @@ namespace Framework.Data
 
                     il.Emit(OpCodes.Dup);// stack is now [parameters] [parameters] [parameter] [parameter]
                     il.Emit(OpCodes.Ldloc_0); // stack is now [parameters] [parameters] [parameter] [parameter] [typed-param]
-                    column.EmitGenerateGet(il); // stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
+                    column.GenerateGetEmit(il); // stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
 
                     /*
                      * 注意1. 可以null的型別才會有NullMapping
@@ -417,7 +417,7 @@ namespace Framework.Data
 #endif
             }
 
-            private void ReplaceLiteral(ColumnInfo[] columns)
+            private void ReplaceLiteral(IEnumerable<ColumnInfo> columns)
             {
                 //仿Dapper的邏輯處理 {=aaaa} 這種東西, 簡單的說就是sql字串替換
                 var literals = Reflect.Dapper.GetLiteralTokens(sql);
@@ -451,7 +451,7 @@ namespace Framework.Data
                         {
                             il.Emit(OpCodes.Ldstr, literal.Token);
                             il.Emit(OpCodes.Ldloc_0); // command, sql, typed parameter
-                            prop.EmitGenerateGet(il); // command, sql, typed value
+                            prop.GenerateGetEmit(il); // command, sql, typed value
                             Type propType = prop.ValueType;
                             var typeCode = Reflect.Dapper.GetTypeCode(propType);
                             switch (typeCode)

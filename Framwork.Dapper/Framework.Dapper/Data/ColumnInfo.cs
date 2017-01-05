@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -18,6 +19,9 @@ namespace Framework.Data
 
         /// <summary>成員資料型別</summary>
         internal Type ValueType { get; set; }
+
+        /// <summary>成員資料是否為集合</summary>
+        internal bool IsEnumerableValue { get; set; } = false;
 
         /// <summary>對應的欄位名稱</summary>
         internal string ColName { get; set; }
@@ -40,6 +44,8 @@ namespace Framework.Data
         /// <summary>產生set值的emit。</summary>
         internal Action<ILGenerator> GenerateSetEmit { get; set; } = null;
 
+        internal ColumnInfo() { }
+
         internal ColumnInfo(MemberInfo member, Type valueType, ColumnAttribute columnAttribute, bool? isStructModel)
         {
             Member = member;
@@ -48,6 +54,7 @@ namespace Framework.Data
             var field = memberType == MemberTypes.Field ? (FieldInfo)member : null;
             var property = field == null & memberType == MemberTypes.Property ? (PropertyInfo)member : null;
             ValueType = valueType ?? field?.FieldType ?? property?.PropertyType;
+            IsEnumerableValue = IsEnumerableType(ValueType);
 
             //如果沒定義ColumnAttribute 或是 ColumnAttribute.Name 是null或是空白代表於類型名稱同名
             if (columnAttribute == null)
@@ -82,6 +89,11 @@ namespace Framework.Data
                 GenerateSetEmit = il => il.EmitCall(callOpCode, setMethod, null);
             }
 
+        }
+
+        internal static bool IsEnumerableType(Type type)
+        {
+            return type != null && type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type);
         }
     }
 }

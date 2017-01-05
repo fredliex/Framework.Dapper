@@ -30,6 +30,12 @@ namespace Framework.Data
             Init(columns);
         }
 
+        internal ColumnInfoCollection(IEnumerable<KeyValuePair<string, object>> dictionary)
+        {
+            var columns = Resolve(dictionary);
+            Init(columns);
+        }
+
         internal ColumnInfoCollection(IEnumerable<ColumnInfo> columns)
         {
             Init(columns);
@@ -67,6 +73,21 @@ namespace Framework.Data
         IEnumerator IEnumerable.GetEnumerator()
         {
             return cols.GetEnumerator();
+        }
+
+        private static IEnumerable<ColumnInfo> Resolve(IEnumerable<KeyValuePair<string, object>> dictionary)
+        {
+            return dictionary.Select(n =>
+            {
+                var valueType = n.Value?.GetType();
+                return new ColumnInfo
+                {
+                    MemberName = n.Key,
+                    ValueType = valueType,
+                    IsEnumerableValue = ColumnInfo.IsEnumerableType(valueType),
+                    ColName = n.Key
+                };
+            });
         }
 
         /*

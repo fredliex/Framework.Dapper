@@ -14,31 +14,29 @@ namespace Framework.Data
             public bool IsMultiParameter { get; private set; }
             public ColumnInfoCollection Columns { get; private set; }
 
-            internal ParameterMatedata(TableInfo modelTable, object parameter)
+            internal ParameterMatedata(object parameter)
             {
+                var dict = parameter as IEnumerable<KeyValuePair<string, object>>;
+                if (dict != null)
+                {
+                }
+
+
                 var multiParams = parameter as IEnumerable;
+
                 if (multiParams != null)
                 {
                     if (multiParams is string) throw new ArgumentException("參數不可為字串");
                     IsMultiParameter = true;
                     parameter = multiParams.Cast<object>().FirstOrDefault();
                 }
-                ColumnInfo[] columns = null;
                 if (parameter != null)
                 {
                     var parameterType = parameter.GetType();
-                    if (parameterType == modelTable.Type)
+                    var dict = multiParams as IEnumerable<KeyValuePair<string, object>>;
+                    if (dict == null)
                     {
-                        Columns = modelTable.Columns;
-                    }
-                    else
-                    {
-                        var dict = multiParams as IEnumerable<KeyValuePair<string, object>>;
-                        if (dict == null)
-                        {
-                            var paramColumns = TableInfo.Get(parameterType).Columns;
-                        }
-
+                        var paramColumns = TableInfo.Get(parameterType).Columns;
                     }
 
                     /*
@@ -57,6 +55,49 @@ namespace Framework.Data
                     */
                 }
             }
+
+            private static ColumnInfoCollection ResolveColumns(object param, out bool isMultiParameter)
+            {
+                isMultiParameter = false;
+
+                //如果是集合參數的話, 抓第一個
+                var multiParams = param as IEnumerable;
+                if (multiParams != null && !(param is string || param is IEnumerable<KeyValuePair<string, object>> || param is DynamicParameters))
+                {
+                    param = multiParams.Cast<object>().FirstOrDefault();
+                    isMultiParameter = true;
+                }
+
+                //如果是DynamicParameters的話
+
+                //如果是Dictionar<string, object>的話
+                var dictParams = param as IEnumerable<KeyValuePair<string, object>>;
+                if (dictParams != null) return new ColumnInfoCollection(dictParams);
+
+
+
+
+
+                IEnumerable<KeyValuePair<string, object>> dictParams = null;
+                if (multiParams != null)
+                {
+                    dictParams = parameter as IEnumerable<KeyValuePair<string, object>>;
+                    if()
+
+                    if (multiParams is string) throw new ArgumentException("參數不可為字串");
+
+
+                    IsMultiParameter = true;
+                    parameter = multiParams.Cast<object>().FirstOrDefault();
+                }
+
+
+                //判斷為
+                if (dict != null) return new ColumnInfoCollection(dict);
+
+
+            }
+
 
             public static Dictionary<string, ParameterMatedata> Resolve(object parameter, TableInfo tableInfo = null)
             {

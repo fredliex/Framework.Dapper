@@ -49,7 +49,7 @@ namespace Framework.Data
             for (var i = 0; i < cols.Length; i++)
             {
                 var column = cols[i];
-                memberMap[column.MemberName] = columnMap[column.ColName] = i;
+                memberMap[column.MemberName] = columnMap[column.ColumnName] = i;
                 if (column.IsConcurrencyCheck)
                 {
                     if (concurrencyCheckColumnIndex.HasValue) throw new InvalidOperationException("最多只能一個欄位設定ColumnAttribute.IsConcurrencyCheck為True。");
@@ -75,6 +75,8 @@ namespace Framework.Data
             return cols.GetEnumerator();
         }
 
+
+        #region 解析Dictionary<string, object>
         private static IEnumerable<ColumnInfo> Resolve(IEnumerable<KeyValuePair<string, object>> dictionary)
         {
             return dictionary.Select(n =>
@@ -85,11 +87,13 @@ namespace Framework.Data
                     MemberName = n.Key,
                     ValueType = valueType,
                     IsEnumerableValue = ColumnInfo.IsEnumerableType(valueType),
-                    ColName = n.Key
+                    ColumnName = n.Key
                 };
             });
         }
+        #endregion
 
+        #region 解析model
         /*
          * 有繼承IModel時，才會考慮TableAttribute, ColumnAttribute, NonColumnAttribute，且會逐繼承鏈來處理。
          * 否則只採用目前type的public成員，而不考慮繼承的議題。
@@ -160,7 +164,6 @@ namespace Framework.Data
             }
             return listByCtor;
         }
-
-
+        #endregion
     }
 }

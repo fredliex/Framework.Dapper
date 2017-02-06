@@ -22,7 +22,9 @@ namespace Framework.Data
             }
             #endregion
 
+            /// <summary>包裝器，用以將外部傳入的參數包裝成內部丟給Dapper用的參數。</summary>
             public Func<object, object> ParamWrapper { get; private set; }
+
             private readonly ConcurrentDictionary<int, Func<IDataReader, object>[]> deserializers = new ConcurrentDictionary<int, Func<IDataReader, object>[]>();
             public Func<IDataReader, object>[] GetOrAddDeserializer(Type[] resultTypes, Func<Type[], Func<IDataReader, object>[]> valueFactory)
             {

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Data;
 using System.Reflection;
 using System.Collections;
+using System.Data.Common;
 
 namespace Framework.Data
 {
@@ -16,7 +17,7 @@ namespace Framework.Data
         internal sealed class DynamicParametersWrapper : SqlMapper.IDynamicParameters
         {
             internal readonly Dapper.DynamicParameters Instance = new Dapper.DynamicParameters();
-            internal List<object> Templates = null;
+            internal List<object> Templates = null; //同DynamicParameters裡面的Templates, 這邊放另外一個副本是因為DynamicParameters.Templates為內部欄位而無法直接取用
 
             public void AddParameters(IDbCommand command, SqlMapper.Identity identity)
             {
@@ -30,6 +31,53 @@ namespace Framework.Data
                     }
                 }
                 ((SqlMapper.IDynamicParameters)Instance).AddParameters(command, identity);
+            }
+
+            public void AddDynamicParams(object param)
+            {
+                //同是DynamicParametersWrapper
+                var wrapper = param as DynamicParametersWrapper;
+                if (wrapper != null)
+                {
+                    if (wrapper.Templates != null)
+                    {
+                        if (Templates == null) Templates = new List<object>();
+                        Templates.AddRange(wrapper.Templates);
+                    }
+                    Instance.AddDynamicParams(wrapper.Instance);
+                    return;
+                }
+
+                //是Dictionary, 須額外處理EnumMapping
+                var dictionary = param as IEnumerable<KeyValuePair<string, object>>;
+                if (dictionary != null)
+                {
+                    Instance.AddDynamicParams(WrapDictionaryParam(dictionary));
+                    return;
+                }
+
+                //一般model
+                if (Templates == null) Templates = new List<object>();
+                Templates.Add(param);
+            }
+
+            //將Dictionary的Value處理Enum轉換
+            private static Dictionary<string, object> WrapDictionaryParam(IEnumerable<KeyValuePair<string, object>> dict)
+            {
+                return dict.ToDictionary(n => n.Key, n =>
+                {
+                    var value = n.Value;
+                    if (value == null) return value;
+                    //針對Enum處理轉換
+                    var list = value as IEnumerable;
+                    Type valueType;
+                    var method =
+                        list == null ? ModelWrapper.EnumValueHelper.GetValueGetterMethod(value.GetType(), out valueType) :
+                        !(list is string) ? ModelWrapper.EnumValueHelper.GetValuesGetterMethod(value.GetType(), out valueType) :
+                        null;
+                    //method為null表示不須Enum轉換
+                    return method == null ? value : method.Invoke(null, new object[] { value });
+                });
             }
 
 #if DEBUG  //測試用而已
@@ -55,41 +103,7 @@ namespace Framework.Data
         public void AddDynamicParams(object param)
         {
             if (param == null) return;
-            var subDynamic = param as DynamicParameters;
-            if (subDynamic != null)
-            {
-                if (subDynamic.Wrapper.Templates != null)
-                {
-                    if (Wrapper.Templates == null) Wrapper.Templates = new List<object>();
-                    Wrapper.Templates.AddRange(subDynamic.Wrapper.Templates);
-                }
-                Wrapper.Instance.AddDynamicParams(subDynamic.Wrapper.Instance);
-                return;
-            }
-            var dictionary = param as IEnumerable<KeyValuePair<string, object>>;
-            if (dictionary != null)
-            {
-                Wrapper.Instance.AddDynamicParams(WrapDictionaryParam(dictionary));
-                return;
-            }
-            if (Wrapper.Templates == null) Wrapper.Templates = new List<object>();
-            Wrapper.Templates.Add(param);
-        }
-
-        private static Dictionary<string, object> WrapDictionaryParam(IEnumerable<KeyValuePair<string, object>> dict)
-        {
-            return dict.ToDictionary(n => n.Key, n =>
-            {
-                var value = n.Value;
-                if (value == null) return value;
-                var list = value as IEnumerable;
-                Type valueType;
-                var method =
-                    list == null ? ModelWrapper.EnumValueHelper.GetValueGetterMethod(value.GetType(), out valueType) :
-                    !(list is string) ? ModelWrapper.EnumValueHelper.GetValuesGetterMethod(value.GetType(), out valueType) :
-                    null;
-                return method == null ? value : method.Invoke(null, new object[] { value });
-            });
+            Wrapper.AddDynamicParams(param);
         }
 
         public void Add(string name, object value, DbType? dbType, ParameterDirection? direction, int? size)

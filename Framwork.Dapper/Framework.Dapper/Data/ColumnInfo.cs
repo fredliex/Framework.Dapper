@@ -2,10 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
+using static Framework.Data.ModelWrapper;
 
 namespace Framework.Data
 {
@@ -24,7 +26,7 @@ namespace Framework.Data
         internal bool IsEnumerableValue { get; set; } = false;
 
         /// <summary>對應的欄位名稱</summary>
-        internal string ColName { get; set; }
+        internal string ColumnName { get; set; }
 
         /// <summary>是否為鍵值</summary>
         internal bool IsKey { get; set; } = false;
@@ -44,6 +46,15 @@ namespace Framework.Data
         /// <summary>產生set值的emit。</summary>
         internal Action<ILGenerator> GenerateSetEmit { get; set; } = null;
 
+        private Func<Expression, Expression> columnValueGetterExpression = null;
+        internal Func<Expression, Expression> ColumnValueGetterExpression => columnValueGetterExpression ?? (columnValueGetterExpression = GenerateColumnValueGetterExpression());
+
+        /*
+        private Func<object, object> columnValueGetter = null;
+        internal Func<object, object> ColumnValueGetter => columnValueGetter ?? (columnValueGetter = GenerateColumnValueGetter());
+        */
+
+
         internal ColumnInfo() { }
 
         internal ColumnInfo(MemberInfo member, Type valueType, ColumnAttribute columnAttribute, bool? isStructModel)
@@ -54,17 +65,17 @@ namespace Framework.Data
             var field = memberType == MemberTypes.Field ? (FieldInfo)member : null;
             var property = field == null & memberType == MemberTypes.Property ? (PropertyInfo)member : null;
             ValueType = valueType ?? field?.FieldType ?? property?.PropertyType;
-            IsEnumerableValue = IsEnumerableType(ValueType);
+            IsEnumerableValue = InternalHelper.IsEnumerableParameter(ValueType);
 
             //如果沒定義ColumnAttribute 或是 ColumnAttribute.Name 是null或是空白代表於類型名稱同名
             if (columnAttribute == null)
             {
-                ColName = MemberName;
+                ColumnName = MemberName;
             }
             else
             {
                 //未設定欄位名稱或是空白的話, 以屬性名稱視為欄位名稱
-                ColName = string.IsNullOrWhiteSpace(columnAttribute.Name) ? MemberName : columnAttribute.Name;
+                ColumnName = string.IsNullOrWhiteSpace(columnAttribute.Name) ? MemberName : columnAttribute.Name;
                 var behavior = columnAttribute.Behavior;
                 IsConcurrencyCheck = (behavior & ColumnBehavior.ConcurrencyCheck) != 0;
                 IsKey = (behavior & ColumnBehavior.Key) != 0;
@@ -88,12 +99,95 @@ namespace Framework.Data
                 GenerateGetEmit = il => il.EmitCall(callOpCode, getMethod, null);
                 GenerateSetEmit = il => il.EmitCall(callOpCode, setMethod, null);
             }
-
         }
 
-        internal static bool IsEnumerableType(Type type)
+
+        private static MethodInfo methodConvertListNull = typeof(ColumnInfo).GetMethod(nameof(ConvertListNull));
+        /// <summary>產生取得column value的Expression</summary>
+        /// <returns></returns>
+        private Func<Expression, Expression> GenerateColumnValueGetterExpression()
         {
-            return type != null && type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type);
+            var getMemberValue = Member.MemberType == MemberTypes.Field ?
+                new Func<Expression, Expression>(expModel => Expression.Field(expModel, (FieldInfo)Member)) :
+                new Func<Expression, Expression>(expModel => Expression.Property(expModel, (PropertyInfo)Member));
+            MethodInfo methodConvertEnum = null;
+            MethodInfo methodConvertNull = null;
+
+            if (IsEnumerableValue)
+            {
+                Type enumValueType;
+                var type = ValueType;
+                methodConvertEnum = ModelWrapper.EnumValueHelper.GetValuesGetterMethod(ValueType, out enumValueType);
+                if (methodConvertEnum != null) type = enumValueType;
+                if (!InternalHelper.IsNullType(type)) methodConvertNull = methodConvertListNull;
+            }
+            else
+            {
+
+            }
+
+
+
+            return expModel =>
+            {
+                var expValue = getMemberValue(expModel);
+                if (methodConvertEnum != null) expValue = Expression.Call(methodConvertEnum, expValue);
+                if (methodConvertNull != null) expValue = Expression.Call(methodConvertNull, expValue);
+
+                return expValue;
+            };
+            /*
+
+            Type enumValueType;
+            if(IsEnumerableValue)
+            {
+                var enumMapper = ModelWrapper.EnumValueHelper.GetValuesGetterMethod(ValueType, out enumValueType);
+
+
+            }
+            */
+            /*
+            var enumMapper = IsEnumerableValue ?
+                ModelWrapper.EnumValueHelper.GetValuesGetterMethod(ValueType, out enumValueType) :
+                ModelWrapper.EnumValueHelper.GetValueGetterMethod(ValueType, out enumValueType);
+            */
+
         }
+
+        private static IEnumerable<object> ConvertListNull(IEnumerable<object> list, object nullValue)
+        {
+            return list.Select(n => n ?? nullValue);
+        }
+
+
+        /*
+        /// <summary>產生取得value的Func</summary>
+        /// <returns></returns>
+        private Func<object, object> GenerateColumnValueGetter()
+        {
+            Type enumValueType;
+            var method = IsEnumerableValue ? 
+                ModelWrapper.EnumValueHelper.GetValuesGetterMethod(ValueType, out enumValueType) : 
+                ModelWrapper.EnumValueHelper.GetValueGetterMethod(ValueType, out enumValueType);
+
+            if(method == null)
+            {
+                return NullMapping == null ?
+                    new Func<object, object>(v => v) :
+                    new Func<object, object>(v => v == NullMapping ? null : v);
+            }
+            else
+            {
+
+            }
+
+            if (NullMapping == null)
+                return v => v;
+            else
+                return v => v == NullMapping ? null : v;
+
+            return method == null ? value : method.Invoke(null, new object[] { value });
+        }
+        */
     }
 }

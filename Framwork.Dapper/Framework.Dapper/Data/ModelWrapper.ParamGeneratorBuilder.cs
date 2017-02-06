@@ -106,6 +106,8 @@ namespace Framework.Data
                 il = dm.GetILGenerator();
             }
 
+
+
             internal Action<IDbCommand, object> CreateGenerator()
             {
                 var table = TableInfo.Get(modelType);

@@ -34,18 +34,27 @@ namespace Framework.Data
                 //DynamicParameters的話就回wrapper
                 if (param is DynamicParameters) return p => ((DynamicParameters)p).Wrapper;
 
-                //Dictionary<string, object>的話丟給DynamicParameters處理
+                //Dictionary<string, object>的話丟給DynamicParameters處理, DynamicParameters內部會處理Enum轉換
                 if (param is IEnumerable<KeyValuePair<string, object>>) return p => new DynamicParameters(p).Wrapper;
 
                 //由ParamWrapper處理
                 var paramGeneratorBuilder = new ParamGeneratorBuilder(paramType, commandType, sql, false);
                 var paramGenerator = paramGeneratorBuilder.CreateGenerator();
-                if (param is IEnumerable && !(param is string || param is IEnumerable<KeyValuePair<string, object>>))
-                    return p => new EnumerableParamWrapper((IEnumerable)p, paramGenerator);
-                return p => new ParamWrapper { Model = p, ParamGenerator = paramGenerator };
+                return param is IEnumerable && !(param is string) ?
+                    new Func<object, object>(p => new EnumerableParamWrapper((IEnumerable)p, paramGenerator)) :
+                    new Func<object, object>(p => new ParamWrapper { Model = p, ParamGenerator = paramGenerator });
             });
 
             return cache.ParamWrapper(param);
+        }
+
+        /// <summary>將資料填充到字典去。</summary>
+        /// <param name="dict"></param>
+        /// <param name="param"></param>
+        /// <returns>回傳dict本身</returns>
+        internal static IDictionary<string, object> FillDictionary(IDictionary<string, object> dict, object param)
+        {
+
         }
         
     }

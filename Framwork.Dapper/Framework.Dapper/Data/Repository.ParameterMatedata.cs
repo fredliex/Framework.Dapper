@@ -16,9 +16,22 @@ namespace Framework.Data
 
             internal ParameterMatedata(object parameter)
             {
-                var dict = parameter as IEnumerable<KeyValuePair<string, object>>;
-                if (dict != null)
+                //如果是集合參數的話, 抓第一個
+                var multiParams = parameter as IEnumerable;
+                if (multiParams != null && !(parameter is string || parameter is IEnumerable<KeyValuePair<string, object>> || parameter is DynamicParameters))
                 {
+                    parameter = multiParams.Cast<object>().FirstOrDefault();
+                    IsMultiParameter = true;
+                }
+
+
+
+
+
+                var dict = parameter as IEnumerable<KeyValuePair<string, object>>;
+                if (dict != null) 
+                {
+                    Columns = new ColumnInfoCollection(dict);
                 }
 
 

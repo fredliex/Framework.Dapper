@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -6,7 +7,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
-
+using static Framework.Data.ModelWrapper;
 
 namespace Framework.Data
 {
@@ -62,6 +63,33 @@ namespace Framework.Data
             funcEmitConstant(il, value, value.GetType());
         }
 
+        internal static bool IsEnumerableParameter(object param)
+        {
+            return param != null && param is IEnumerable && !(param is string) && param.GetType().FullName != Reflect.Dapper.LinqBinary;
+        }
+
+        internal static bool IsEnumerableParameter(Type type)
+        {
+            //非string, 是IEnumerable, 非LinqBinary
+            return type != null && type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type) && type.FullName != Reflect.Dapper.LinqBinary;
+        }
+
+        /// <summary>
+        /// 判斷是否為可null的類型。可能為物件類型或是nullable類型。
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="nullableType">如果是nullable類型的話，回傳基礎型別</param>
+        /// <returns></returns>
+        internal static bool IsNullType(Type type, out Type nullableType)
+        {
+            nullableType = null;
+            return !type.IsValueType || (nullableType = Nullable.GetUnderlyingType(type)) != null;
+        }
+
+        internal static bool IsNullType(Type type)
+        {
+            return !type.IsValueType || Nullable.GetUnderlyingType(type) != null;
+        }
 
     }
 }

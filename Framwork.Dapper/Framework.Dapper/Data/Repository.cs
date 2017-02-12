@@ -32,7 +32,8 @@ namespace Framework.Data
             {
                 datas = new[] { data };
             }
-            return datas.Select(tableInfo.GetRepositoryMatedata).ToList();
+            return null;
+            //return datas.Select(tableInfo.GetRepositoryMatedata).ToList();
         }
 
         private IDbConnection conn;
@@ -49,6 +50,7 @@ namespace Framework.Data
         }
 
         #region select
+        /*
         public IEnumerable<T> Select(object parameters = null)
         {
 
@@ -59,6 +61,7 @@ namespace Framework.Data
         {
 
         }
+        */
 
         /// <summary>依照matedata來產生sql</summary>
         /// <param name="matedata"></param>

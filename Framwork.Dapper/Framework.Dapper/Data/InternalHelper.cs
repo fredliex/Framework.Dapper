@@ -91,5 +91,14 @@ namespace Framework.Data
             return !type.IsValueType || Nullable.GetUnderlyingType(type) != null;
         }
 
+        /// <summary>
+        /// 取得集合的元素類型
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        internal static Type GetElementType(Type collectionType)
+        {
+            return collectionType.GetInterfaces().FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IEnumerable<>));        
+        }
     }
 }

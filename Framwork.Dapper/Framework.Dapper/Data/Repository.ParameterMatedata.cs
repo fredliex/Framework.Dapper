@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
+#if false
 namespace Framework.Data
 {
     partial class Repository
@@ -188,3 +190,4 @@ namespace Framework.Data
 
     }
 }
+#endif

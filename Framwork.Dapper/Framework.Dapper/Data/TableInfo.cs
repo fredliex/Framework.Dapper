@@ -40,9 +40,6 @@ namespace Framework.Data
         /// <summary>欄位資訊</summary>
         public ColumnInfoCollection Columns { get; private set; }
 
-        private Action<IDictionary<string, object>, object> paremterFiller = null;
-        internal Action<IDictionary<string, object>, object> ParemterFiller => paremterFiller ?? (paremterFiller = GenerateParemterFiller());
-
         private TableInfo(Type modelType)
         {
             Type = modelType;
@@ -62,29 +59,6 @@ namespace Framework.Data
             if (string.IsNullOrWhiteSpace(Table)) Table = modelType.Name;
 
             Columns = new ColumnInfoCollection(Type, HasModelInterface, IsStructModel);
-        }
-
-        private static MethodInfo dictionarySetMethod = typeof(IDictionary<string, object>).GetProperties().First(p => p.GetIndexParameters().Length > 0).GetSetMethod();
-        private Action<IDictionary<string, object>, object> GenerateParemterFiller()
-        {
-            //Key為ColumnName
-            var expParamDict = Expression.Parameter(typeof(IDictionary<string, object>));
-            var expParamObject = Expression.Parameter(typeof(object));
-            var expVarModel = Expression.Variable(Type);
-            var expBody = new List<Expression>();
-            expBody.Add(Expression.Assign(expVarModel, Expression.Convert(expParamObject, Type)));
-            foreach (var column in Columns)
-            {
-                var member = column.Member;
-                var expValue = member.MemberType == MemberTypes.Field ? Expression.Field(expVarModel, (FieldInfo)member) : Expression.Property(expVarModel, (PropertyInfo)member);
-
-
-
-                expBody.Add(Expression.Call(expParamDict, dictionarySetMethod, Expression.Constant(column.ColumnName), expValue));
-            }
-            var expBlock = Expression.Block(new[] { expVarModel }, expBody);
-            var lambda = Expression.Lambda<Action<IDictionary<string, object>, object>>(expBlock, new[] { expParamDict, expParamObject });
-            return lambda.Compile();
         }
 
         /*

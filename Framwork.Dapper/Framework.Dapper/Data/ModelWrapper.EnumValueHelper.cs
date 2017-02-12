@@ -150,22 +150,22 @@ namespace Framework.Data
                 #region 集合
                 public static IEnumerable<TValue> EnumsToClassValues<TValue>(IEnumerable<TEnum> enumValues) where TValue : class
                 {
-                    return enumValues.Select(EnumToClass<TValue>);
+                    return enumValues?.Select(EnumToClass<TValue>);
                 }
 
                 public static IEnumerable<TValue> NullEnumsToClassValues<TValue>(IEnumerable<TEnum?> enumValues) where TValue : class
                 {
-                    return enumValues.Select(NullEnumToClass<TValue>);
+                    return enumValues?.Select(NullEnumToClass<TValue>);
                 }
 
                 public static IEnumerable<TValue?> EnumsToStructValues<TValue>(IEnumerable<TEnum> enumValues) where TValue : struct
                 {
-                    return enumValues.Select(EnumToStruct<TValue>);
+                    return enumValues?.Select(EnumToStruct<TValue>);
                 }
 
                 public static IEnumerable<TValue?> NullEnumsToStructValues<TValue>(IEnumerable<TEnum?> enumValues) where TValue : struct
                 {
-                    return enumValues.Select(NullEnumToStruct<TValue>);
+                    return enumValues?.Select(NullEnumToStruct<TValue>);
                 }
                 #endregion
 
@@ -284,7 +284,7 @@ namespace Framework.Data
             internal static MethodInfo GetValuesGetterMethod(Type memberType, out Type valueType)
             {
                 valueType = null;
-                var enumerableType = memberType.GetInterfaces().FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+                var enumerableType = InternalHelper.GetElementType(memberType);
                 if (enumerableType == null) return null;
                 var elemType = enumerableType.GetGenericArguments()[0];
                 bool isNullableEnum;

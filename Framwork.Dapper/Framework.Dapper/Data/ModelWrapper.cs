@@ -54,7 +54,7 @@ namespace Framework.Data
         /// <returns>回傳dict本身</returns>
         internal static IDictionary<string, object> FillDictionary(IDictionary<string, object> dict, object param)
         {
-
+            throw new NotImplementedException();
         }
         
     }

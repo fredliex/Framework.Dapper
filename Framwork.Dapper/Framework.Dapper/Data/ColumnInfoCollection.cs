@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -86,7 +87,7 @@ namespace Framework.Data
                 {
                     MemberName = n.Key,
                     ValueType = valueType,
-                    IsEnumerableValue = ColumnInfo.IsEnumerableType(valueType),
+                    IsEnumerableValue = InternalHelper.IsEnumerableParameter(valueType),
                     ColumnName = n.Key
                 };
             });
@@ -165,5 +166,59 @@ namespace Framework.Data
             return listByCtor;
         }
         #endregion
+
+        private static MethodInfo dictionarySetMethod = typeof(IDictionary<string, object>).GetProperties().First(p => p.GetIndexParameters().Length > 0).GetSetMethod();
+        private static MethodInfo methodConvertListNull = typeof(ColumnInfoCollection).GetMethod(nameof(ConvertListNull), BindingFlags.Static | BindingFlags.NonPublic);
+
+        internal static Action<IDictionary<string, object>, object> BuildDictionaryFiller(Type modelType)
+        {
+            return BuildDictionaryFiller(modelType, TableInfo.Get(modelType).Columns);
+        }
+        internal static Action<IDictionary<string, object>, object> BuildDictionaryFiller(Type modelType, IEnumerable<ColumnInfo> columns)
+        {
+            var expParamDict = Expression.Parameter(typeof(IDictionary<string, object>));
+            var expParamObject = Expression.Parameter(typeof(object));
+            var expVarModel = Expression.Variable(modelType);
+            var expBody = new List<Expression>();
+            expBody.Add(Expression.Assign(expVarModel, Expression.Convert(expParamObject, modelType)));
+            foreach (var column in columns)
+            {
+                var member = column.Member;
+                Expression expValue = member.MemberType == MemberTypes.Field ? Expression.Field(expVarModel, (FieldInfo)member) : Expression.Property(expVarModel, (PropertyInfo)member);
+
+                Type elemType;
+                MethodInfo methodConvertEnum = null;
+                Type enumValueType = null;
+                if (column.IsEnumerableValue)
+                {
+                    methodConvertEnum = ModelWrapper.EnumValueHelper.GetValuesGetterMethod(column.ValueType, out enumValueType);
+                    elemType = methodConvertEnum == null ? InternalHelper.GetElementType(column.ValueType) : enumValueType;
+                }
+                else
+                {
+                    methodConvertEnum = ModelWrapper.EnumValueHelper.GetValueGetterMethod(column.ValueType, out enumValueType);
+                    elemType = methodConvertEnum == null ? column.ValueType : enumValueType;
+                }
+                if (methodConvertEnum != null) expValue = Expression.Call(methodConvertEnum, expValue);
+                if(!column.IsEnumerableValue && !elemType.IsClass) expValue = Expression.Convert(expValue, typeof(object));
+                if (column.NullMapping != null && InternalHelper.IsNullType(elemType))
+                {
+                    var expNullValue = Expression.Constant(column.NullMapping, typeof(object));
+                    if (column.IsEnumerableValue)
+                        expValue = Expression.Call(methodConvertListNull, expValue, expNullValue);
+                    else
+                        expValue = Expression.Coalesce(expValue, expNullValue);
+                }
+                expBody.Add(Expression.Call(expParamDict, dictionarySetMethod, Expression.Constant(column.ColumnName), expValue));
+            }
+            var expBlock = Expression.Block(new[] { expVarModel }, expBody);
+            var lambda = Expression.Lambda<Action<IDictionary<string, object>, object>>(expBlock, new[] { expParamDict, expParamObject });
+            return lambda.Compile();
+        }
+
+        private static List<object> ConvertListNull(IEnumerable<object> list, object nullValue)
+        {
+            return list == null ? null : list.Select(n => n ?? nullValue).ToList();
+        }
     }
 }

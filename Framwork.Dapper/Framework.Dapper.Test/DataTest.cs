@@ -132,7 +132,7 @@ namespace Framework.Test
         }
         #endregion
 
-        #region PublicInternal
+        #region PublicInternalModel
         internal sealed class PublicInternalModel : IModel
         {
             public string strCol1;
@@ -195,7 +195,7 @@ namespace Framework.Test
         }
         #endregion
 
-        #region PublicInternal
+        #region PublicInternalStruct
         internal struct PublicInternalStruct : IModel
         {
             public string strCol1;
@@ -565,6 +565,68 @@ namespace Framework.Test
             Assert.Equal(NormalEnum.B, QueryData<NormalEnum>("select 'B'"));
             Assert.Throws<Exception>(() => QueryData<NormalEnum>("select convert(varchar, null)"));
             Assert.Equal(null, QueryData<NormalEnum?>("select convert(varchar, null)"));
+        }
+        #endregion
+
+
+        #region Model轉Dictionary
+        public sealed class DictionaryModel : IModel
+        {
+            public int intCol;
+
+            [Column(NullMapping = "A")]
+            public NormalEnum? nullNorEnum;
+
+            [Column(NullMapping = 10)]
+            public StringEnum? nullStrEnum;
+
+            [Column(NullMapping = 2D)] //docuble
+            public string strCol;
+
+            [Column(NullMapping = 3L)] //long
+            public int? nullIntCol;
+
+            [Column(NullMapping = NormalEnum.A)]
+            public decimal? nullDecimalCol;
+
+            [Column(NullMapping = 10)]
+            public StringEnum?[] nullStrEnumArray;
+        }
+
+        [Fact(DisplayName = "Model轉Dictionary")]
+        public void Model轉Dictionary()
+        {
+            var dictFiller = ColumnInfoCollection.BuildDictionaryFiller(typeof(DictionaryModel));
+            var model = new DictionaryModel
+            {
+                intCol = 30,
+                nullDecimalCol = 10,
+                nullIntCol = 20,
+                nullNorEnum = NormalEnum.B,
+                strCol = "a",
+                nullStrEnum = StringEnum.C,
+                nullStrEnumArray = new StringEnum?[] { StringEnum.A, StringEnum.B, StringEnum.C }
+            };
+            var dict = new Dictionary<string, object>();
+            dictFiller(dict, model);
+            Assert.Equal(model.intCol, dict[nameof(DictionaryModel.intCol)]);
+            Assert.Equal(model.nullNorEnum, dict[nameof(DictionaryModel.nullNorEnum)]);
+            Assert.Equal("cc", dict[nameof(DictionaryModel.nullStrEnum)]);
+            Assert.Equal(model.strCol, dict[nameof(DictionaryModel.strCol)]);
+            Assert.Equal(model.nullIntCol, dict[nameof(DictionaryModel.nullIntCol)]);
+            Assert.Equal(model.nullDecimalCol, dict[nameof(DictionaryModel.nullDecimalCol)]);
+            Assert.True(((IEnumerable<object>)dict[nameof(DictionaryModel.nullStrEnumArray)]).SequenceEqual(new object[] { "aa", "bb", "cc" }));
+
+            // null mapping 
+            dict.Clear();
+            model = new DictionaryModel { nullStrEnumArray = new StringEnum?[] { null, null, null } };
+            dictFiller(dict, model);
+            Assert.Equal("A", dict[nameof(DictionaryModel.nullNorEnum)]);
+            Assert.Equal(10, dict[nameof(DictionaryModel.nullStrEnum)]);
+            Assert.Equal(2D, dict[nameof(DictionaryModel.strCol)]);
+            Assert.Equal(3L, dict[nameof(DictionaryModel.nullIntCol)]);
+            Assert.Equal(NormalEnum.A, dict[nameof(DictionaryModel.nullDecimalCol)]);
+            Assert.True(((IEnumerable<object>)dict[nameof(DictionaryModel.nullStrEnumArray)]).SequenceEqual(new object[] { 10, 10, 10 }));
         }
         #endregion
     }

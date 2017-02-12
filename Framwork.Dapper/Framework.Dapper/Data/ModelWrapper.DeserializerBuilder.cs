@@ -256,9 +256,7 @@ namespace Framework.Data
                     il.Emit(OpCodes.Ldloc_1);// [target]
                 }
 
-                var table = GetTableInfo(type);
-                var members = names.Select(table.GetColumn);
-
+                var table = TableInfo.Get(type);
                 /* model.Enum -> EnumValue.NullValue -> ColumnAttribute.NullMapping -> database
                  * database -> Trim -> ColumnAttribute.NullMapping(特定值轉成null) -> EnumValue.NullValue(null轉成特定enum) -> model.Enum
                  * 
@@ -294,7 +292,7 @@ namespace Framework.Data
 
                 var allDone = il.DefineLabel();
                 int valueCopyLocal = il.DeclareLocal(typeof(object)).LocalIndex;     //valueCopyLocal是區域變數2, 放value值
-                foreach (var item in members)
+                foreach (var item in table.Columns)
                 {
                     if (item != null)
                     {
@@ -405,7 +403,7 @@ namespace Framework.Data
                         if (isNullableConstructor) il.Emit(OpCodes.Newobj, memberType.GetConstructor(new[] { nullUnderlyingType })); // stack is now [target][target][typed-value]
 
                         //14. 非建構式的話， prop = value
-                        if (specializedConstructor == null) item.EmitGenerateSet(il); //stack is now[target]
+                        if (specializedConstructor == null) item.GenerateSetEmit(il); //stack is now[target]
 
                         //15. goto finishLabel:
                         il.Emit(OpCodes.Br_S, finishLabel); // stack is now [target]
@@ -425,7 +423,7 @@ namespace Framework.Data
                             if (nullUnderlyingType != null) il.Emit(OpCodes.Newobj, memberType.GetConstructor(new[] { nullUnderlyingType })); // stack is now [target][target][typed-value]
 
                             //20. 非建構式的話， prop = value
-                            if (specializedConstructor == null) item.EmitGenerateSet(il);   //stack is now[target]
+                            if (specializedConstructor == null) item.GenerateSetEmit(il);   //stack is now[target]
                         }
                         else
                         {

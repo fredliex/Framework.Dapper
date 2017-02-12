@@ -10,28 +10,6 @@ namespace Framework.Data
 {
     partial class Repository
     {
-        internal sealed class ParameterColumnInfo : ColumnInfo
-        {
-            internal override MemberInfo Member
-            {
-                get { throw new NotImplementedException(); }
-            }
-
-            internal override MemberTypes MemberType
-            {
-                get { throw new NotImplementedException(); }
-            }
-
-            internal override void EmitGenerateGet(ILGenerator il)
-            {
-                throw new NotImplementedException();
-            }
-
-            internal override void EmitGenerateSet(ILGenerator il)
-            {
-                throw new NotImplementedException();
-            }
-        }
 
     }
 }

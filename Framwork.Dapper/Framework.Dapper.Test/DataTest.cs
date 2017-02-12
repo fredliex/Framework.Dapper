@@ -596,7 +596,7 @@ namespace Framework.Test
         [Fact(DisplayName = "Model轉Dictionary")]
         public void Model轉Dictionary()
         {
-            var dictFiller = ColumnInfoCollection.BuildDictionaryFiller(typeof(DictionaryModel));
+            var dictFiller = ColumnInfoCollection.GenerateDictionaryFiller(typeof(DictionaryModel));
             var model = new DictionaryModel
             {
                 intCol = 30,

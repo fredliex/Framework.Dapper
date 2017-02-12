@@ -170,11 +170,11 @@ namespace Framework.Data
         private static MethodInfo dictionarySetMethod = typeof(IDictionary<string, object>).GetProperties().First(p => p.GetIndexParameters().Length > 0).GetSetMethod();
         private static MethodInfo methodConvertListNull = typeof(ColumnInfoCollection).GetMethod(nameof(ConvertListNull), BindingFlags.Static | BindingFlags.NonPublic);
 
-        internal static Action<IDictionary<string, object>, object> BuildDictionaryFiller(Type modelType)
+        internal static Action<IDictionary<string, object>, object> GenerateDictionaryFiller(Type modelType)
         {
-            return BuildDictionaryFiller(modelType, TableInfo.Get(modelType).Columns);
+            return GenerateDictionaryFiller(modelType, TableInfo.Get(modelType).Columns);
         }
-        internal static Action<IDictionary<string, object>, object> BuildDictionaryFiller(Type modelType, IEnumerable<ColumnInfo> columns)
+        internal static Action<IDictionary<string, object>, object> GenerateDictionaryFiller(Type modelType, IEnumerable<ColumnInfo> columns)
         {
             var expParamDict = Expression.Parameter(typeof(IDictionary<string, object>));
             var expParamObject = Expression.Parameter(typeof(object));

@@ -168,7 +168,6 @@ namespace Framework.Data
         #endregion
 
         private static MethodInfo dictionarySetMethod = typeof(IDictionary<string, object>).GetProperties().First(p => p.GetIndexParameters().Length > 0).GetSetMethod();
-        private static MethodInfo methodConvertListNull = typeof(ColumnInfoCollection).GetMethod(nameof(ConvertListNull), BindingFlags.Static | BindingFlags.NonPublic);
 
         internal static Action<IDictionary<string, object>, object> GenerateDictionaryFiller(Type modelType)
         {
@@ -181,44 +180,11 @@ namespace Framework.Data
             var expVarModel = Expression.Variable(modelType);
             var expBody = new List<Expression>();
             expBody.Add(Expression.Assign(expVarModel, Expression.Convert(expParamObject, modelType)));
-            foreach (var column in columns)
-            {
-                var member = column.Member;
-                Expression expValue = member.MemberType == MemberTypes.Field ? Expression.Field(expVarModel, (FieldInfo)member) : Expression.Property(expVarModel, (PropertyInfo)member);
-
-                Type elemType;
-                MethodInfo methodConvertEnum = null;
-                Type enumValueType = null;
-                if (column.IsEnumerableValue)
-                {
-                    methodConvertEnum = ModelWrapper.EnumValueHelper.GetValuesGetterMethod(column.ValueType, out enumValueType);
-                    elemType = methodConvertEnum == null ? InternalHelper.GetElementType(column.ValueType) : enumValueType;
-                }
-                else
-                {
-                    methodConvertEnum = ModelWrapper.EnumValueHelper.GetValueGetterMethod(column.ValueType, out enumValueType);
-                    elemType = methodConvertEnum == null ? column.ValueType : enumValueType;
-                }
-                if (methodConvertEnum != null) expValue = Expression.Call(methodConvertEnum, expValue);
-                if(!column.IsEnumerableValue && !elemType.IsClass) expValue = Expression.Convert(expValue, typeof(object));
-                if (column.NullMapping != null && InternalHelper.IsNullType(elemType))
-                {
-                    var expNullValue = Expression.Constant(column.NullMapping, typeof(object));
-                    if (column.IsEnumerableValue)
-                        expValue = Expression.Call(methodConvertListNull, expValue, expNullValue);
-                    else
-                        expValue = Expression.Coalesce(expValue, expNullValue);
-                }
-                expBody.Add(Expression.Call(expParamDict, dictionarySetMethod, Expression.Constant(column.ColumnName), expValue));
-            }
+            expBody.AddRange(columns.Select(col => Expression.Call(expParamDict, dictionarySetMethod, Expression.Constant(col.ColumnName), col.GetGetterExpression(expVarModel))));
             var expBlock = Expression.Block(new[] { expVarModel }, expBody);
             var lambda = Expression.Lambda<Action<IDictionary<string, object>, object>>(expBlock, new[] { expParamDict, expParamObject });
             return lambda.Compile();
         }
 
-        private static List<object> ConvertListNull(IEnumerable<object> list, object nullValue)
-        {
-            return list == null ? null : list.Select(n => n ?? nullValue).ToList();
-        }
     }
 }

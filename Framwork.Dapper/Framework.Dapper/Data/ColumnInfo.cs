@@ -93,6 +93,38 @@ namespace Framework.Data
         }
 
 
+        #region 取得抓值的Expression
+        internal Expression GetGetterExpression(ParameterExpression expModel)
+        {
+            Expression expValue = Member.MemberType == MemberTypes.Field ? Expression.Field(expModel, (FieldInfo)Member) : Expression.Property(expModel, (PropertyInfo)Member);
+            Type elemType;
+            MethodInfo methodConvertEnum = null;
+            Type enumValueType = null;
+            if (IsEnumerableValue)
+            {
+                methodConvertEnum = ModelWrapper.EnumValueHelper.GetValuesGetterMethod(ValueType, out enumValueType);
+                elemType = methodConvertEnum == null ? InternalHelper.GetElementType(ValueType) : enumValueType;
+            }
+            else
+            {
+                methodConvertEnum = ModelWrapper.EnumValueHelper.GetValueGetterMethod(ValueType, out enumValueType);
+                elemType = methodConvertEnum == null ? ValueType : enumValueType;
+            }
+            if (methodConvertEnum != null) expValue = Expression.Call(methodConvertEnum, expValue);
+            if (!IsEnumerableValue && !elemType.IsClass) expValue = Expression.Convert(expValue, typeof(object));
+            if (NullMapping != null && InternalHelper.IsNullType(elemType))
+            {
+                var expNullValue = Expression.Constant(NullMapping, typeof(object));
+                expValue = IsEnumerableValue ? (Expression)Expression.Call(methodConvertListNull, expValue, expNullValue) : Expression.Coalesce(expValue, expNullValue);
+            }
+            return expValue;
+        }
 
+        private static MethodInfo methodConvertListNull = typeof(ColumnInfo).GetMethod(nameof(ConvertListNull), BindingFlags.Static | BindingFlags.NonPublic);
+        private static List<object> ConvertListNull(IEnumerable<object> list, object nullValue)
+        {
+            return list == null ? null : list.Select(n => n ?? nullValue).ToList();
+        }
+        #endregion
     }
 }

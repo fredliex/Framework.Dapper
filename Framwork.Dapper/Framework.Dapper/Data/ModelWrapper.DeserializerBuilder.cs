@@ -307,7 +307,7 @@ namespace Framework.Data
                         il.Emit(OpCodes.Dup);                           // stack is now [target][target][value-as-object][value-as-object]
                         Reflect.Dapper.StoreLocal(il, valueCopyLocal);  // stack is now [target][target][value]
                         Type colType = reader.GetFieldType(index);
-                        Type memberType = item.ValueType;
+                        Type memberType = item.ElementType;
                         var nullUnderlyingType = Nullable.GetUnderlyingType(memberType);
                         object enumNullValue = null;
 

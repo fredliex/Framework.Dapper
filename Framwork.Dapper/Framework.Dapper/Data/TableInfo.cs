@@ -34,7 +34,7 @@ namespace Framework.Data
         /// <summary>Model是否為struct</summary>
         internal bool IsStructModel { get; private set; }
 
-        /// <summary>是否有繼承IModel</summary>
+        /// <summary>是否有繼承IDataModel</summary>
         internal bool HasModelInterface { get; private set; }
 
         /// <summary>欄位資訊</summary>
@@ -44,9 +44,9 @@ namespace Framework.Data
         {
             Type = modelType;
             IsStructModel = modelType.IsValueType;
-            HasModelInterface = typeof(IModel).IsAssignableFrom(modelType);
+            HasModelInterface = typeof(IDataModel).IsAssignableFrom(modelType);
 
-            //有繼承IModel就看TableAttribute，TableAttribute忽略繼承鍊。
+            //有繼承IDataModel就看TableAttribute，TableAttribute忽略繼承鍊。
             var attr = HasModelInterface ? modelType.GetAttribute<TableAttribute>(false) : null;
             if (attr != null)
             {

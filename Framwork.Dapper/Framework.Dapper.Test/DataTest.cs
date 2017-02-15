@@ -50,7 +50,7 @@ namespace Framework.Test
             }
         }
 
-        #region 非IModel物件
+        #region 非IDataModel物件
         internal sealed class NonInterfaceClass
         {
             public string strCol1;
@@ -59,7 +59,7 @@ namespace Framework.Test
             internal string strCol4 { get; set; }
             public StringEnum strEnum { get; set; }
         }
-        [Fact(DisplayName = "非IModel物件-參數")]
+        [Fact(DisplayName = "非IDataModel物件-參數")]
         public void NonInterfaceClassParam()
         {
             var model = new NonInterfaceClass { strCol1 = "3", strCol2 = "4", strCol3 = "5", strCol4 = "6", strEnum = StringEnum.B };
@@ -72,7 +72,7 @@ namespace Framework.Test
         }
 
 
-        [Fact(DisplayName = "非IModel物件-查詢")]
+        [Fact(DisplayName = "非IDataModel物件-查詢")]
         public void NonInterfaceClassQuery()
         {
             var model = QueryData<NonInterfaceClass>("select 'a' strCol1, 'b' strCol2, 'c' strCol3, 'd' strCol4, 'bb' strEnum");
@@ -91,7 +91,7 @@ namespace Framework.Test
         }
         #endregion
 
-        #region 非IModel結構
+        #region 非IDataModel結構
         internal struct NonInterfaceStruct
         {
             public string strCol1;
@@ -100,7 +100,7 @@ namespace Framework.Test
             internal string strCol4 { get; set; }
             public StringEnum strEnum { get; set; }
         }
-        [Fact(DisplayName = "非IModel結構-參數")]
+        [Fact(DisplayName = "非IDataModel結構-參數")]
         public void NonInterfaceStructParam()
         {
             var model = new NonInterfaceStruct { strCol1 = "3", strCol2 = "4", strCol3 = "5", strCol4 = "6", strEnum = StringEnum.B };
@@ -113,7 +113,7 @@ namespace Framework.Test
         }
 
 
-        [Fact(DisplayName = "非IModel結構-查詢")]
+        [Fact(DisplayName = "非IDataModel結構-查詢")]
         public void NonInterfaceStructQuery()
         {
             var model = QueryData<NonInterfaceStruct>("select 'a' strCol1, 'b' strCol2, 'c' strCol3, 'd' strCol4, 'bb' strEnum");
@@ -133,7 +133,7 @@ namespace Framework.Test
         #endregion
 
         #region PublicInternalModel
-        internal sealed class PublicInternalModel : IModel
+        internal sealed class PublicInternalModel : IDataModel
         {
             public string strCol1;
             public string strCol2 { get; set; }
@@ -196,7 +196,7 @@ namespace Framework.Test
         #endregion
 
         #region PublicInternalStruct
-        internal struct PublicInternalStruct : IModel
+        internal struct PublicInternalStruct : IDataModel
         {
             public string strCol1;
             public string strCol2 { get; set; }
@@ -269,11 +269,11 @@ namespace Framework.Test
         #region EnumMapping
         public enum StringEnum
         {
-            [Value("aa")]
+            [DbValue("aa")]
             A,
-            [Value("bb")]
+            [DbValue("bb")]
             B,
-            [Value("cc")]
+            [DbValue("cc")]
             C
         }
         public enum NormalEnum
@@ -282,7 +282,7 @@ namespace Framework.Test
             B = 2,
             C = 3
         }
-        public sealed class EnumMappingModel : IModel
+        public sealed class EnumMappingModel : IDataModel
         {
             public NormalEnum norEnum;
             public StringEnum strEnum;
@@ -328,7 +328,7 @@ namespace Framework.Test
         #endregion
 
         #region Nullable
-        internal sealed class NullableModel : IModel
+        internal sealed class NullableModel : IDataModel
         {
             public NormalEnum? norEnum;
             public StringEnum? strEnum;
@@ -384,7 +384,7 @@ namespace Framework.Test
         #endregion
 
         #region NullMapping
-        public sealed class NullMappingModel : IModel
+        public sealed class NullMappingModel : IDataModel
         {
             [Column(NullMapping = "A")]
             public NormalEnum? norEnum;
@@ -570,7 +570,7 @@ namespace Framework.Test
 
 
         #region Model轉Dictionary
-        public sealed class DictionaryModel : IModel
+        public sealed class DictionaryModel : IDataModel
         {
             public int intCol;
 

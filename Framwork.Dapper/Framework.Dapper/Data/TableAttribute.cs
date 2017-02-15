@@ -14,7 +14,7 @@ namespace Framework.Data
      * Inherited = false 是因為即使是衍生的model不太可能會對到同一個table
      */
 
-    /// <summary>變更對應Table。一旦類型有繼承IModel則預設為TableAttribute(Name=類型名稱)</summary>
+    /// <summary>變更對應Table。一旦類型有繼承IDataModel則預設為TableAttribute(Name=類型名稱)</summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false, AllowMultiple = false)]
     public sealed class TableAttribute : Attribute
     {

@@ -137,7 +137,7 @@ namespace Framework.Data
                 foreach (var column in actualColumns)
                 {
                     memberName = column.MemberName;
-                    memberType = column.ValueType;
+                    memberType = column.ElementType;
 
                     //如果有實作Dapper.SqlMapper.ICustomQueryParameter的話就按照Dapper的邏輯處理
                     if (typeof(ICustomQueryParameter).IsAssignableFrom(memberType))
@@ -151,7 +151,7 @@ namespace Framework.Data
                     }
 
                     //如果是集合的話, 就處理"in", 這邊按原本Dapper邏輯處理
-                    if (column.IsEnumerableValue)
+                    if (column.IsEnumerable)
                     {
                         // this actually represents special handling for list types;
                         il.Emit(OpCodes.Ldarg_0); // stack is now [parameters] [command]
@@ -454,7 +454,7 @@ namespace Framework.Data
                             il.Emit(OpCodes.Ldstr, literal.Token);
                             il.Emit(OpCodes.Ldloc_0); // command, sql, typed parameter
                             prop.GenerateGetEmit(il); // command, sql, typed value
-                            Type propType = prop.ValueType;
+                            Type propType = prop.ElementType;
                             var typeCode = Reflect.Dapper.GetTypeCode(propType);
                             switch (typeCode)
                             {

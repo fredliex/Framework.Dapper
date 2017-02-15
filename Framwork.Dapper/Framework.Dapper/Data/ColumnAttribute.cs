@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Framework.Data
 {
-    /// <summary>變更對應Column。一旦類型有繼承IModel則預設公開類型為ColumnAttribute(Name=類型名稱, IsPrimaryKey=false, NullValue=null)</summary>
+    /// <summary>變更對應Column。一旦類型有繼承IDataModel則預設公開類型為ColumnAttribute(Name=類型名稱, IsPrimaryKey=false, NullValue=null)</summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public sealed class ColumnAttribute : Attribute
     {

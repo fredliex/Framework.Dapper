@@ -13,7 +13,7 @@ namespace Framework.Data
     /// <para>資料庫轉成model的時候，會先處理 ColumnAttribute的NullMapping 再處理 ValueAttribute 的null值。</para>
     /// </summary>
     [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
-    public sealed class ValueAttribute : Attribute
+    public sealed class DbValueAttribute : Attribute
     {
         /// <summary>於資料庫中的對應值，必須是值類型。</summary>
         /// <remarks>即使型別是object, 但attribute支援的類型僅有bool、byte、char、double、float、int、long、short、string, object, Enum, typeof(), null</remarks>
@@ -21,7 +21,7 @@ namespace Framework.Data
 
         /// <summary></summary>
         /// <param name="value">於資料庫中的對應值，必須是值類型。</param>
-        public ValueAttribute(object value)
+        public DbValueAttribute(object value)
         {
             Value = value;
         }

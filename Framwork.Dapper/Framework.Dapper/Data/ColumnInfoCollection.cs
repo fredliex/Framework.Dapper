@@ -27,15 +27,17 @@ namespace Framework.Data
 
         internal ColumnInfoCollection(Type modelType, bool? hasModelInterface, bool? isStructModel) 
         {
-            var columns = Resolve(modelType, hasModelInterface ?? typeof(IModel).IsAssignableFrom(modelType), isStructModel ?? modelType.IsValueType);
+            var columns = Resolve(modelType, hasModelInterface ?? typeof(IDataModel).IsAssignableFrom(modelType), isStructModel ?? modelType.IsValueType);
             Init(columns);
         }
 
+        /*
         internal ColumnInfoCollection(IEnumerable<KeyValuePair<string, object>> dictionary)
         {
             var columns = Resolve(dictionary);
             Init(columns);
         }
+        */
 
         internal ColumnInfoCollection(IEnumerable<ColumnInfo> columns)
         {
@@ -76,7 +78,7 @@ namespace Framework.Data
             return cols.GetEnumerator();
         }
 
-
+        /*
         #region 解析Dictionary<string, object>
         private static IEnumerable<ColumnInfo> Resolve(IEnumerable<KeyValuePair<string, object>> dictionary)
         {
@@ -93,10 +95,11 @@ namespace Framework.Data
             });
         }
         #endregion
+        */
 
         #region 解析model
         /*
-         * 有繼承IModel時，才會考慮TableAttribute, ColumnAttribute, NonColumnAttribute，且會逐繼承鏈來處理。
+         * 有繼承IDataModel時，才會考慮TableAttribute, ColumnAttribute, NonColumnAttribute，且會逐繼承鏈來處理。
          * 否則只採用目前type的public成員，而不考慮繼承的議題。
          * 比照Dapper的規則: 如果類似tuple的, 則依照建構式的順序, 否則就依照名稱排序
          */
@@ -121,7 +124,7 @@ namespace Framework.Data
                         members[member.Name] = new { member, isPublic, isField, attr };
                     }
                 };
-                //有實作IModel時為了處理member Attribute的Inherited問題, 所以要順著繼承鍊來處理
+                //有實作IDataModel時為了處理member Attribute的Inherited問題, 所以要順著繼承鍊來處理
                 var inheritLink = new List<Type>();
                 for (var type = modelType; type != typeof(object); type = type.BaseType) inheritLink.Add(type);
                 for (var inheritIndex = inheritLink.Count - 1; inheritIndex >= 0; inheritIndex--)
@@ -136,7 +139,7 @@ namespace Framework.Data
             }
             else
             {
-                //沒實作IModel時, 只抓public屬性, 不需逐繼承鍊處理
+                //沒實作IDataModel時, 只抓public屬性, 不需逐繼承鍊處理
                 columns = modelType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
                     .Where(p => p.GetIndexParameters().Length == 0)
                     .Select(p => new ColumnInfo(p, null, p.GetAttribute<ColumnAttribute>(false), isStructModel))

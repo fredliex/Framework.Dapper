@@ -63,16 +63,37 @@ namespace Framework.Data
             funcEmitConstant(il, value, value.GetType());
         }
 
+        [Obsolete]
         internal static bool IsEnumerableParameter(object param)
         {
+            //非string, 是IEnumerable, 非LinqBinary
             return param != null && param is IEnumerable && !(param is string) && param.GetType().FullName != Reflect.Dapper.LinqBinary;
         }
 
+        [Obsolete]
         internal static bool IsEnumerableParameter(Type type)
         {
             //非string, 是IEnumerable, 非LinqBinary
             return type != null && type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type) && type.FullName != Reflect.Dapper.LinqBinary;
         }
+
+        /// <summary>
+        /// 取得集合的元素類型
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        internal static Type GetElementType(Type collectionType)
+        {
+            //非string, 是IEnumerable, 非LinqBinary
+            if (collectionType != null && collectionType != typeof(string) && typeof(IEnumerable).IsAssignableFrom(collectionType) && collectionType.FullName != Reflect.Dapper.LinqBinary)
+            {
+                var enumerableType = collectionType.GetInterfaces().FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+                //如果沒有實作IEnumerable<>表示為IEnumerable, 型別只是object
+                return enumerableType == null ? typeof(object) : enumerableType.GetGenericArguments().First();
+            }
+            return null;
+        }
+
 
         /// <summary>
         /// 判斷是否為可null的類型。可能為物件類型或是nullable類型。
@@ -91,14 +112,5 @@ namespace Framework.Data
             return !type.IsValueType || Nullable.GetUnderlyingType(type) != null;
         }
 
-        /// <summary>
-        /// 取得集合的元素類型
-        /// </summary>
-        /// <param name="type"></param>
-        /// <returns></returns>
-        internal static Type GetElementType(Type collectionType)
-        {
-            return collectionType.GetInterfaces().FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IEnumerable<>));        
-        }
     }
 }

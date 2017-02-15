@@ -13,6 +13,22 @@ namespace Framework.Data
 {
     partial class ModelWrapper
     {
+        internal abstract class EnumInfo
+        {
+            /// <summary>列舉型別</summary>
+            public Type EnumType { get; private set; }
+
+            /// <summary>對應的資料庫型別</summary>
+            public Type DbValueType { get; private set; }
+
+
+
+            private EnumInfo() { }
+
+
+        }
+
+
         internal static class EnumValueHelper
         {
             internal abstract class EnumHandlerBase : Dapper.SqlMapper.ITypeHandler
@@ -200,7 +216,7 @@ namespace Framework.Data
                 #region 取得成員值以及對應值
                 foreach (FieldInfo field in fields)
                 {
-                    var attr = field.GetAttribute<ValueAttribute>(false);
+                    var attr = field.GetAttribute<DbValueAttribute>(false);
                     if (attr == null) continue;
                     var dbValue = attr.Value;
                     var enumValue = field.GetValue(null);
@@ -260,6 +276,11 @@ namespace Framework.Data
                 var handler = GetHandler(memberType, out isNullableEnum);
                 nullValue = handler?.NullValue;
                 return isNullableEnum ? handler?.valueToNullEnum : handler?.valueToEnum;
+            }
+
+            internal static MethodInfo GetToDbValueMethod(Type elemType, bool isEnumerable, out Type dbValueType)
+            {
+
             }
 
             /// <summary>取得 Enum 或 Enum? 轉成 Value 的MethodInfo。</summary>

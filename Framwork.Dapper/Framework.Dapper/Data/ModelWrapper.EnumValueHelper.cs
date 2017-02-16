@@ -13,19 +13,137 @@ namespace Framework.Data
 {
     partial class ModelWrapper
     {
-        internal abstract class EnumInfo
+        /// <summary>列舉對應資訊</summary>
+        internal sealed class EnumInfo
         {
+            private static class Converter<TEnum> where TEnum : struct, IComparable, IFormattable, IConvertible
+            {
+                #region 單個
+                public static TValue EnumToClass<TValue>(TEnum enumValue) where TValue : class
+                {
+                    TValue value;
+                    bool isNull;
+                    if (Metadata<TEnum, TValue>.TryGetValue(enumValue, out value, out isNull)) return isNull ? null : value;
+                    throw new Exception($"未定義{enumValue}的對應值");
+                }
+
+                public static TValue NullEnumToClass<TValue>(TEnum? enumValue) where TValue : class
+                {
+                    return enumValue.HasValue ? EnumToClass<TValue>(enumValue.GetValueOrDefault()) : null;
+                }
+
+                public static TValue? EnumToStruct<TValue>(TEnum enumValue) where TValue : struct
+                {
+                    TValue value;
+                    bool isNull;
+                    if (Metadata<TEnum, TValue>.TryGetValue(enumValue, out value, out isNull)) return isNull ? (TValue?)null : value;
+                    throw new Exception($"未定義{enumValue}的對應值");
+                }
+
+                public static TValue? NullEnumToStruct<TValue>(TEnum? enumValue) where TValue : struct
+                {
+                    return enumValue.HasValue ? EnumToStruct<TValue>(enumValue.GetValueOrDefault()) : (TValue?)null;
+                }
+                #endregion
+
+                #region 集合
+                public static IEnumerable<TValue> EnumsToClassValues<TValue>(IEnumerable<TEnum> enumValues) where TValue : class
+                {
+                    return enumValues?.Select(EnumToClass<TValue>);
+                }
+
+                public static IEnumerable<TValue> NullEnumsToClassValues<TValue>(IEnumerable<TEnum?> enumValues) where TValue : class
+                {
+                    return enumValues?.Select(NullEnumToClass<TValue>);
+                }
+
+                public static IEnumerable<TValue?> EnumsToStructValues<TValue>(IEnumerable<TEnum> enumValues) where TValue : struct
+                {
+                    return enumValues?.Select(EnumToStruct<TValue>);
+                }
+
+                public static IEnumerable<TValue?> NullEnumsToStructValues<TValue>(IEnumerable<TEnum?> enumValues) where TValue : struct
+                {
+                    return enumValues?.Select(NullEnumToStruct<TValue>);
+                }
+                #endregion
+            }
+
+            private abstract class Metadata
+            {
+                /// <summary>列舉型態。非nullable。</summary>
+                public Type EnumType { get; protected set; }
+
+                /// <summary>對應DbValue的型態。可能會string或是值類型或是nullable。</summary>
+                public Type DbValueType { get; protected set; }
+
+                /// <summary>對應DbValue的基礎型態。非nullable。</summary>
+                public Type DbValueUnderlyingType { get; protected set; }
+
+
+                /// <summary>取得Enum轉DbValue的Method</summary>
+                /// <param name="isNullableEnum">元素是否為nullable</param>
+                /// <param name="isCollection">是否為集合</param>
+                /// <returns></returns>
+                public abstract MethodInfo GetToDbValueMethod(bool isNullableEnum, bool isCollection);
+            }
+
+            private sealed class Metadata<TEnum, TDbValue> : Metadata where TEnum : struct, IComparable, IFormattable, IConvertible
+            {
+                /// <summary>Enum轉資料庫欄位值的對應</summary>
+                private static ReadOnlyDictionary<TEnum, TDbValue> toValueMap;
+                /// <summary>資料庫欄位值轉Enum的對應</summary>
+                private static ReadOnlyDictionary<TDbValue, TEnum> toEnumMap;
+                /// <summary>當DbValue為null時對應的Enum，null表示沒null所對應的TEnum。</summary>
+                private static TEnum? nullValue;
+
+                internal static bool TryGetValue(TEnum vEnum, out TDbValue vValue, out bool isNullValue)
+                {
+                    isNullValue = false;
+                    vValue = default(TDbValue);
+                    if (nullValue.HasValue && EqualityComparer<TEnum>.Default.Equals(nullValue.GetValueOrDefault(), vEnum))
+                    {
+                        isNullValue = true;
+                        return true;
+                    }
+                    return toValueMap.TryGetValue(vEnum, out vValue);
+                }
+
+
+                private readonly MethodInfo[] toDbValueMethods = new MethodInfo[4];
+                public override MethodInfo GetToDbValueMethod(bool isNullableEnum, bool isCollection)
+                {
+                    var index = (isNullableEnum ? 1 : 0) * 2 + (isCollection ? 1 : 0);
+                    var method = toDbValueMethods[index];
+                    if (method != null) return method;
+
+                    string methodName;
+                    if (DbValueUnderlyingType.IsValueType)
+                    {
+                        methodName = isNullableEnum ?
+                            (isCollection ? nameof(Converter<int>.NullEnumsToStructValues) : nameof(Converter<int>.NullEnumToStruct)) :
+                            (isCollection ? nameof(Converter<int>.EnumsToStructValues) : nameof(Converter<int>.EnumToStruct));
+                    }
+                    else
+                    {
+                        methodName = isNullableEnum ?
+                            (isCollection ? nameof(Converter<int>.NullEnumsToClassValues) : nameof(Converter<int>.NullEnumToClass)) :
+                            (isCollection ? nameof(Converter<int>.EnumsToClassValues) : nameof(Converter<int>.EnumToClass));
+
+                    }
+                    method = typeof(Converter<TEnum>).GetMethod(methodName).MakeGenericMethod(DbValueUnderlyingType);
+                    toDbValueMethods[index] = method;
+                    return method;
+                }
+            }
+
             /// <summary>列舉型別</summary>
             public Type EnumType { get; private set; }
 
             /// <summary>對應的資料庫型別</summary>
             public Type DbValueType { get; private set; }
 
-
-
             private EnumInfo() { }
-
-
         }
 
 

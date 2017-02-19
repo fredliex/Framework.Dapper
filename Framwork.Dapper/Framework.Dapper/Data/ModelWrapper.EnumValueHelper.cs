@@ -16,14 +16,15 @@ namespace Framework.Data
         /// <summary>列舉對應資訊</summary>
         internal sealed class EnumInfo
         {
-            private static class Converter<TEnum> where TEnum : struct, IComparable, IFormattable, IConvertible
+            #region static & type define
+            private static class Converter1<TEnum> where TEnum : struct, IComparable, IFormattable, IConvertible
             {
                 #region 單個
                 public static TValue EnumToClass<TValue>(TEnum enumValue) where TValue : class
                 {
                     TValue value;
                     bool isNull;
-                    if (Metadata<TEnum, TValue>.TryGetValue(enumValue, out value, out isNull)) return isNull ? null : value;
+                    if (MappingConverter<TEnum, TValue>.TryGetValue(enumValue, out value, out isNull)) return isNull ? null : value;
                     throw new Exception($"未定義{enumValue}的對應值");
                 }
 
@@ -36,7 +37,7 @@ namespace Framework.Data
                 {
                     TValue value;
                     bool isNull;
-                    if (Metadata<TEnum, TValue>.TryGetValue(enumValue, out value, out isNull)) return isNull ? (TValue?)null : value;
+                    if (MappingConverter<TEnum, TValue>.TryGetValue(enumValue, out value, out isNull)) return isNull ? (TValue?)null : value;
                     throw new Exception($"未定義{enumValue}的對應值");
                 }
 
@@ -69,26 +70,155 @@ namespace Framework.Data
                 #endregion
             }
 
-            private abstract class Metadata
+
+            /*
+             * 繼承鏈
+             *  IConverter
+             *      Converter<TEnum> -> 
+             *          Converter<TEnum>,MappingConverter<TDbValue>   有DbValueAttribute的
+             *          Converter<TEnum>.DefaultConverter             沒DbValueAttribute的
+             */
+            private interface IConverter
             {
                 /// <summary>列舉型態。非nullable。</summary>
-                public Type EnumType { get; protected set; }
+                Type EnumType { get; }
 
                 /// <summary>對應DbValue的型態。可能會string或是值類型或是nullable。</summary>
-                public Type DbValueType { get; protected set; }
+                Type ValueType { get; }
 
                 /// <summary>對應DbValue的基礎型態。非nullable。</summary>
-                public Type DbValueUnderlyingType { get; protected set; }
-
+                Type ValueUnderlyingType { get; }
 
                 /// <summary>取得Enum轉DbValue的Method</summary>
                 /// <param name="isNullableEnum">元素是否為nullable</param>
                 /// <param name="isCollection">是否為集合</param>
                 /// <returns></returns>
-                public abstract MethodInfo GetToDbValueMethod(bool isNullableEnum, bool isCollection);
+                MethodInfo GetToValueMethod(bool isNullableEnum, bool isCollection);
             }
 
-            private sealed class Metadata<TEnum, TDbValue> : Metadata where TEnum : struct, IComparable, IFormattable, IConvertible
+            private static class ConverterHelper
+            {
+                //使用bit運算來儲存method, isCollection^1 + isNullableEnum^2 + isStructValue^3
+                private static MethodInfo[] mappingMethods = new[] {
+                    nameof(EnumToClass), nameof(EnumsToClassValues), nameof(NullEnumToClass), nameof(NullEnumsToClassValues),
+                    nameof(EnumToStruct), nameof(EnumsToStructValues), nameof(NullEnumToStruct), nameof(NullEnumsToStructValues)
+                }.Select(n => typeof(ConverterHelper).GetMethod(n)).ToArray();
+
+                private static MethodInfo[] defaultMethods = new[] {
+                    nameof(EnumToUnderly), nameof(EnumToUnderlyValues), nameof(NullEnumToUnderly), nameof(NullEnumsToUnderlyValues)
+                }.Select(n => typeof(ConverterHelper).GetMethod(n)).ToArray();
+
+                public static MethodInfo GetMappingConvertMethod(Type enumType, Type valueUnderlyingType, bool isNullableEnum, bool isCollection)
+                {
+                    var index = 
+                        (valueUnderlyingType.IsValueType ? 1 << 2 : 0) +
+                        (isNullableEnum ? 1 << 1 : 0) +
+                        (isCollection ? 1 : 0);
+                    return mappingMethods[index].MakeGenericMethod(enumType, valueUnderlyingType);
+                }
+
+                public static MethodInfo GetDefaultConvertMethod(Type enumType, Type valueUnderlyingType, bool isNullableEnum, bool isCollection)
+                {
+                    var index = (isNullableEnum ? 1 << 1 : 0) + (isCollection ? 1 : 0);
+                    return defaultMethods[index].MakeGenericMethod(enumType, valueUnderlyingType);
+                }
+
+
+                #region 單個
+                public static T EnumToClass<TEnum, T>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where T : class
+                {
+                    T value;
+                    bool isNull;
+                    if (Converter<TEnum>.MappingConverter<T>.TryGetValue(enumValue, out value, out isNull)) return isNull ? null : value;
+                    throw new Exception($"未定義{enumValue}的對應值");
+                }
+                public static T? EnumToStruct<TEnum, T>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where T : struct
+                {
+                    T value;
+                    bool isNull;
+                    if (Converter<TEnum>.MappingConverter<T>.TryGetValue(enumValue, out value, out isNull)) return isNull ? (T?)null : value;
+                    throw new Exception($"未定義{enumValue}的對應值");
+                }
+
+                public static T NullEnumToClass<TEnum, T>(TEnum? enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where T : class => 
+                    enumValue.HasValue ? EnumToClass<TEnum, T>((TEnum)enumValue) : null;
+                public static T? NullEnumToStruct<TEnum, T>(TEnum? enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where T : struct => 
+                    enumValue.HasValue ? EnumToStruct<TEnum, T>((TEnum)enumValue) : (T?)null;
+                #endregion
+
+                #region 集合
+                public static IEnumerable<T> EnumsToClassValues<TEnum, T>(IEnumerable<TEnum> enumValues) where TEnum : struct, IComparable, IFormattable, IConvertible where T : class => 
+                    enumValues?.Select(EnumToClass<TEnum, T>);
+                public static IEnumerable<T?> EnumsToStructValues<TEnum, T>(IEnumerable<TEnum> enumValues) where TEnum : struct, IComparable, IFormattable, IConvertible where T : struct => 
+                    enumValues?.Select(EnumToStruct<TEnum, T>);
+                public static IEnumerable<T> NullEnumsToClassValues<TEnum, T>(IEnumerable<TEnum?> enumValues) where TEnum : struct, IComparable, IFormattable, IConvertible where T : class => 
+                    enumValues?.Select(NullEnumToClass<TEnum, T>);
+                public static IEnumerable<T?> NullEnumsToStructValues<TEnum, T>(IEnumerable<TEnum?> enumValues) where TEnum : struct, IComparable, IFormattable, IConvertible where T : struct => 
+                    enumValues?.Select(NullEnumToStruct<TEnum, T>);
+                #endregion
+
+                #region Underly
+                public static T EnumToUnderly<TEnum, T>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where T : struct => 
+                    (T)(object)enumValue;
+                public static T? NullEnumToUnderly<TEnum, T>(TEnum? enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where T : struct =>
+                    enumValue.HasValue ? NullEnumToUnderly<TEnum, T>((TEnum)enumValue) : null;
+                public static IEnumerable<T> EnumToUnderlyValues<TEnum, T>(IEnumerable<TEnum> enumValues) where TEnum : struct, IComparable, IFormattable, IConvertible where T : struct =>
+                    enumValues?.Select(EnumToUnderly<TEnum, T>);
+                public static IEnumerable<T?> NullEnumsToUnderlyValues<TEnum, T>(IEnumerable<TEnum?> enumValues) where TEnum : struct, IComparable, IFormattable, IConvertible where T : struct =>
+                    enumValues?.Select(NullEnumToUnderly<TEnum, T>);
+                #endregion
+            }
+
+            private class Converter<TEnum> : IConverter where TEnum : struct, IComparable, IFormattable, IConvertible
+            {
+                public Type ValueType { get; protected set; }
+                public Type ValueUnderlyingType { get; protected set; }
+                public Type EnumType { get; protected set; }
+
+                public virtual MethodInfo GetToValueMethod(bool isNullableEnum, bool isCollection)
+                {
+                    var enumType = typeof(TEnum);
+                    var underlyingType = Enum.GetUnderlyingType(enumType);
+                    return ConverterHelper.GetDefaultConvertMethod(enumType, underlyingType, isNullableEnum, isCollection);
+                }
+
+                #region MappingConverter
+                internal sealed class MappingConverter<TDbValue> : Converter<TEnum>
+                {
+                    /// <summary>Enum轉資料庫欄位值的對應</summary>
+                    private static ReadOnlyDictionary<TEnum, TDbValue> toValueMap;
+                    /// <summary>資料庫欄位值轉Enum的對應</summary>
+                    private static ReadOnlyDictionary<TDbValue, TEnum> toEnumMap;
+                    /// <summary>當DbValue為null時對應的Enum，null表示沒null所對應的TEnum。</summary>
+                    private static TEnum? nullValue;
+
+                    internal static bool TryGetValue(TEnum vEnum, out TDbValue vValue, out bool isNullValue)
+                    {
+                        isNullValue = false;
+                        vValue = default(TDbValue);
+                        if (nullValue.HasValue && EqualityComparer<TEnum>.Default.Equals(nullValue.GetValueOrDefault(), vEnum))
+                        {
+                            isNullValue = true;
+                            return true;
+                        }
+                        return toValueMap.TryGetValue(vEnum, out vValue);
+                    }
+
+                    private readonly MethodInfo[] toDbValueMethods = new MethodInfo[4];
+                    public override MethodInfo GetToValueMethod(bool isNullableEnum, bool isCollection)
+                    {
+                        var index = (isNullableEnum ? 1 << 1 : 0) + (isCollection ? 1 : 0);
+                        var method = toDbValueMethods[index];
+                        if (method != null) return method;
+                        toDbValueMethods[index] = method = ConverterHelper.GetMappingConvertMethod(typeof(TEnum), ValueUnderlyingType, isNullableEnum, isCollection);
+                        return method;
+                    }
+                }
+                #endregion
+            }
+
+            /*
+            private sealed class MappingConverter<TEnum, TDbValue> : IConverter where TEnum : struct, IComparable, IFormattable, IConvertible
             {
                 /// <summary>Enum轉資料庫欄位值的對應</summary>
                 private static ReadOnlyDictionary<TEnum, TDbValue> toValueMap;
@@ -121,21 +251,22 @@ namespace Framework.Data
                     if (DbValueUnderlyingType.IsValueType)
                     {
                         methodName = isNullableEnum ?
-                            (isCollection ? nameof(Converter<int>.NullEnumsToStructValues) : nameof(Converter<int>.NullEnumToStruct)) :
-                            (isCollection ? nameof(Converter<int>.EnumsToStructValues) : nameof(Converter<int>.EnumToStruct));
+                            (isCollection ? nameof(Converter1<int>.NullEnumsToStructValues) : nameof(Converter1<int>.NullEnumToStruct)) :
+                            (isCollection ? nameof(Converter1<int>.EnumsToStructValues) : nameof(Converter1<int>.EnumToStruct));
                     }
                     else
                     {
                         methodName = isNullableEnum ?
-                            (isCollection ? nameof(Converter<int>.NullEnumsToClassValues) : nameof(Converter<int>.NullEnumToClass)) :
-                            (isCollection ? nameof(Converter<int>.EnumsToClassValues) : nameof(Converter<int>.EnumToClass));
+                            (isCollection ? nameof(Converter1<int>.NullEnumsToClassValues) : nameof(Converter1<int>.NullEnumToClass)) :
+                            (isCollection ? nameof(Converter1<int>.EnumsToClassValues) : nameof(Converter1<int>.EnumToClass));
 
                     }
-                    method = typeof(Converter<TEnum>).GetMethod(methodName).MakeGenericMethod(DbValueUnderlyingType);
-                    toDbValueMethods[index] = method;
+                    toDbValueMethods[index] = method = typeof(Converter1<TEnum>).GetMethod(methodName).MakeGenericMethod(DbValueUnderlyingType);
                     return method;
                 }
             }
+            #endregion
+            */
 
             /// <summary>列舉型別</summary>
             public Type EnumType { get; private set; }

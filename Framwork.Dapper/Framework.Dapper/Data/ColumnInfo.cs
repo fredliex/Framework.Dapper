@@ -48,6 +48,9 @@ namespace Framework.Data
         /// <summary>產生set值的emit。</summary>
         internal Action<ILGenerator> GenerateSetEmit { get; private set; }
 
+        /// <summary>列舉資訊。如果非列舉的話，會是null。</summary>
+        internal EnumInfo EnumInfo { get; private set; }
+
         internal ColumnInfo(MemberInfo member, Type valueType, ColumnAttribute columnAttribute, bool? isStructModel)
         {
             Member = member;
@@ -79,6 +82,8 @@ namespace Framework.Data
                 if (IsConcurrencyCheck && ElementType != typeof(DateTime) && ElementType != typeof(DateTime?))
                     throw new InvalidOperationException("ColumnBehavior.ConcurrencyCheck只允許設定於類型為DateTime或Nullable<DateTime>的成員上。");
             }
+            if (ElementType.IsEnum) EnumInfo = EnumInfo.Get(ElementType);
+
             if (field != null)
             {
                 GenerateGetEmit = il => il.Emit(OpCodes.Ldfld, field);

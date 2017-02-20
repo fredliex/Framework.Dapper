@@ -95,11 +95,11 @@ namespace Framework.Data
                 /// <summary>列舉型態。非nullable。</summary>
                 Type EnumType { get; }
 
-                /// <summary>對應DbValue的型態。可能會string或是值類型或是nullable。</summary>
-                Type ValueType { get; }
+                /// <summary>Enum的基礎型態。或是DbValue的非nullable型態。</summary>
+                Type UnderlyingValueType { get; }
 
-                /// <summary>對應DbValue的基礎型態。非nullable。</summary>
-                Type ValueUnderlyingType { get; }
+                /// <summary>UnderlyingValueType的nullable型態。如果UnderlyingValueType是物件類型的話，會同UnderlyingValueType。</summary>
+                Type NullableValueType { get; }
 
                 /// <summary>取得Enum轉DbValue的Method</summary>
                 /// <param name="isNullableEnum">元素是否為nullable</param>
@@ -111,16 +111,26 @@ namespace Framework.Data
             #region Converter
             private class DefaultConverter<TEnum> : IConverter where TEnum : struct, IComparable, IFormattable, IConvertible
             {
-                public Type ValueType { get; protected set; }
-                public Type ValueUnderlyingType { get; protected set; }
-                public Type EnumType { get; protected set; }
+                private static Type enumType = typeof(TEnum);
+                private static Type underlyingValueType = Enum.GetUnderlyingType(enumType);
+                private static Type uullableValueType = typeof(Nullable<>).MakeGenericType(underlyingValueType);
 
-                public virtual MethodInfo GetToValueMethod(bool isNullableEnum, bool isCollection)
+                public Type EnumType { get; } = typeof(TEnum);
+                public virtual Type UnderlyingValueType { get; } = underlyingValueType;
+                public virtual Type NullableValueType { get; } = uullableValueType;
+
+                private readonly MethodInfo[] toDbValueMethods = new MethodInfo[4];
+                public MethodInfo GetToValueMethod(bool isNullableEnum, bool isCollection)
                 {
-                    var enumType = typeof(TEnum);
-                    var underlyingType = Enum.GetUnderlyingType(enumType);
-                    return ConverterHelper.GetDefaultConvertMethod(enumType, underlyingType, isNullableEnum, isCollection);
+                    var index = (isNullableEnum ? 1 << 1 : 0) + (isCollection ? 1 : 0);
+                    var method = toDbValueMethods[index];
+                    if (method != null) return method;
+                    toDbValueMethods[index] = method = GetToValueMethodImp(isNullableEnum, isCollection);
+                    return method;
                 }
+
+                protected virtual MethodInfo GetToValueMethodImp(bool isNullableEnum, bool isCollection) => 
+                    ConverterHelper.GetDefaultConvertMethod(EnumType, underlyingValueType, isNullableEnum, isCollection);
             }
             #endregion
 
@@ -132,7 +142,12 @@ namespace Framework.Data
                 /// <summary>資料庫欄位值轉Enum的對應</summary>
                 private static ReadOnlyDictionary<TDbValue, TEnum> toEnumMap;
                 /// <summary>當DbValue為null時對應的Enum，null表示沒null所對應的TEnum。</summary>
-                private static TEnum? nullValue;
+                private static TEnum? nullValue = null;
+
+                private static Type underlyingValueType = typeof(TDbValue);
+                private static Type uullableValueType = underlyingValueType.IsClass ? underlyingValueType : typeof(Nullable<>).MakeGenericType(underlyingValueType);
+                public override Type UnderlyingValueType { get; } = typeof(TDbValue);
+                public override Type NullableValueType { get; } = uullableValueType;
 
                 public MappingConverter(List<KeyValuePair<object, object>> mapping, object nullValue)
                 {
@@ -163,15 +178,8 @@ namespace Framework.Data
                     return toValueMap.TryGetValue(vEnum, out vValue);
                 }
 
-                private readonly MethodInfo[] toDbValueMethods = new MethodInfo[4];
-                public override MethodInfo GetToValueMethod(bool isNullableEnum, bool isCollection)
-                {
-                    var index = (isNullableEnum ? 1 << 1 : 0) + (isCollection ? 1 : 0);
-                    var method = toDbValueMethods[index];
-                    if (method != null) return method;
-                    toDbValueMethods[index] = method = ConverterHelper.GetMappingConvertMethod(typeof(TEnum), ValueUnderlyingType, isNullableEnum, isCollection);
-                    return method;
-                }
+                protected override MethodInfo GetToValueMethodImp(bool isNullableEnum, bool isCollection) => 
+                    ConverterHelper.GetMappingConvertMethod(EnumType, underlyingValueType, isNullableEnum, isCollection);
             }
             #endregion
 

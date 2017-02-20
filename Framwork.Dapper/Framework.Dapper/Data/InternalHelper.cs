@@ -81,7 +81,7 @@ namespace Framework.Data
         /// 取得集合的元素類型
         /// </summary>
         /// <param name="type"></param>
-        /// <returns></returns>
+        /// <returns>非集合的話回傳null</returns>
         internal static Type GetElementType(Type collectionType)
         {
             //非string, 是IEnumerable, 非LinqBinary
@@ -93,7 +93,6 @@ namespace Framework.Data
             }
             return null;
         }
-
 
         /// <summary>
         /// 判斷是否為可null的類型。可能為物件類型或是nullable類型。

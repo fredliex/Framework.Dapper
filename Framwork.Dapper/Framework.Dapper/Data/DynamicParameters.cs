@@ -68,15 +68,20 @@ namespace Framework.Data
                 {
                     var value = n.Value;
                     if (value == null) return value;
-                    //針對Enum處理轉換
-                    var list = value as IEnumerable;
-                    Type valueType;
-                    var method =
-                        list == null ? ModelWrapper.EnumValueHelper.GetValueGetterMethod(value.GetType(), out valueType) :
-                        !(list is string) ? ModelWrapper.EnumValueHelper.GetValuesGetterMethod(value.GetType(), out valueType) :
-                        null;
-                    //method為null表示不須Enum轉換
-                    return method == null ? value : method.Invoke(null, new object[] { value });
+
+                    var valueType = value.GetType();
+                    var elemType = InternalHelper.GetElementType(valueType);
+                    var isCollection = elemType != null;
+                    if (elemType == null) elemType = valueType;
+                    var nullableType = Nullable.GetUnderlyingType(elemType);
+                    var isNullableType = nullableType != null;
+                    if (nullableType != null) elemType = nullableType;
+                    if (elemType.IsEnum)
+                    {
+                        var method = ModelWrapper.EnumInfo.Get(elemType).Converter.GetToValueMethod(isNullableType, isCollection);
+                        return method.Invoke(null, new object[] { value });
+                    }
+                    return value;
                 });
             }
 

@@ -21,7 +21,7 @@ namespace Framework.Data
         /// <summary>成員名稱</summary>
         internal string MemberName { get; private set; }
 
-        /// <summary>成員元素資料型別。</summary>
+        /// <summary>成員元素資料型別。不會是IEnumerable。</summary>
         internal Type ElementType { get; private set; }
 
         /// <summary>成員資料是否為集合</summary>
@@ -104,21 +104,17 @@ namespace Framework.Data
         internal Expression GetGetterExpression(ParameterExpression expModel)
         {
             Expression expValue = Member.MemberType == MemberTypes.Field ? Expression.Field(expModel, (FieldInfo)Member) : Expression.Property(expModel, (PropertyInfo)Member);
-            Type elemType;
             MethodInfo methodConvertEnum = null;
-            Type enumValueType = null;
-            if (IsEnumerable)
+            var elemType = ElementType;
+            if (EnumInfo != null)
             {
-                methodConvertEnum = EnumValueHelper.GetValuesGetterMethod(ElementType, out enumValueType);
-                elemType = methodConvertEnum == null ? InternalHelper.GetElementType(ElementType) : enumValueType;
-            }
-            else
-            {
-                methodConvertEnum = EnumValueHelper.GetValueGetterMethod(ElementType, out enumValueType);
-                elemType = methodConvertEnum == null ? ElementType : enumValueType;
+                var isNullableEnum = Nullable.GetUnderlyingType(elemType) != null;
+                methodConvertEnum = EnumInfo.Converter.GetToValueMethod(isNullableEnum, IsEnumerable);
+                elemType = isNullableEnum ? EnumInfo.Converter.NullableValueType : EnumInfo.Converter.UnderlyingValueType;
             }
             if (methodConvertEnum != null) expValue = Expression.Call(methodConvertEnum, expValue);
             if (!IsEnumerable && !elemType.IsClass) expValue = Expression.Convert(expValue, typeof(object));
+            //判斷目前資料是否可為null，可以的話就處理NullMapping
             if (NullMapping != null && InternalHelper.IsNullType(elemType))
             {
                 var expNullValue = Expression.Constant(NullMapping, typeof(object));

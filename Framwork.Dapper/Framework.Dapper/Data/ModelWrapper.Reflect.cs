@@ -19,6 +19,7 @@ namespace Framework.Data
     {
         internal static class Reflect
         {
+            internal static readonly MethodInfo IDataReader_GetValue = typeof(IDataReader).GetMethod(nameof(IDataReader.GetValue));
             internal static readonly MethodInfo IDbCommand_Parameters_Get = typeof(IDbCommand).GetProperty(nameof(IDbCommand.Parameters)).GetGetMethod();
             internal static readonly MethodInfo IDbCommand_CreateParameter = typeof(IDbCommand).GetMethod(nameof(IDbCommand.CreateParameter));
             internal static readonly MethodInfo IDbCommand_CommandText_Get = typeof(IDbCommand).GetProperty(nameof(IDbCommand.CommandText)).GetGetMethod();

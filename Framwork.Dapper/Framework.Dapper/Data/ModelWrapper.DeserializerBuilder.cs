@@ -124,22 +124,25 @@ namespace Framework.Data
                 var effectiveType = nullableType ?? type;
                 if (Reflect.Dapper.typeMap.ContainsKey(type) || type.FullName == Reflect.Dapper.LinqBinary) 
                     return Reflect.Dapper.GetStructDeserializer(type, effectiveType, startBound);
+                // Enum
                 if (effectiveType.IsEnum)
                 {
-                    object enumNullValue;
-                    var fromValueToEnum = EnumValueHelper.GetEnumGetterMethod(effectiveType, out enumNullValue);
-                    if (fromValueToEnum != null)
+                    var enumInfo = EnumInfo.Get(effectiveType);
+                    //DbValue => Enum
+                    if (enumInfo.IsDbValueMapping)
                     {
-                        // r => fromValueToEnum(r.GetValue(startBound))
                         var expParmeter = Expression.Parameter(typeof(IDataReader));
-                        var expBody = Expression.Call(fromValueToEnum, Expression.Call(expParmeter, typeof(IDataReader).GetMethod(nameof(IDataReader.GetValue)), new[] { Expression.Constant(startBound) }));
+                        var expValue = Expression.Call(enumInfo.Converter.GetToEnumMethod(), Expression.Call(expParmeter, Reflect.IDataReader_GetValue, new[] { Expression.Constant(startBound) }));
+                        var expBody = Expression.Convert(expValue, typeof(object));
                         return Expression.Lambda<Func<IDataReader, object>>(expBody, new[] { expParmeter }).Compile();
                     }
+                    //parse string to Enum
                     if (reader.GetFieldType(startBound) == typeof(string))
                     {
                         var allowNull = nullableType != null;
                         return r => ParseEnum(effectiveType, r.IsDBNull(0) ? null : r.GetString(startBound), allowNull);
                     }
+                    //呼叫Dapper內建的處理
                     return Reflect.Dapper.GetStructDeserializer(type, effectiveType, startBound);
                 }
                 return GetTypeDeserializer(type, reader, startBound, length, returnNullIfFirstMissing);

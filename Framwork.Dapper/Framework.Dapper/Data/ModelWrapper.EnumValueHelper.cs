@@ -50,14 +50,14 @@ namespace Framework.Data
                 {
                     T value;
                     bool isNull;
-                    if (DefaultConverter<TEnum>.MappingConverter<T>.TryGetValue(enumValue, out value, out isNull)) return isNull ? null : value;
+                    if (MappingConverter<TEnum, T>.TryGetValue(enumValue, out value, out isNull)) return isNull ? null : value;
                     throw new Exception($"未定義{enumValue}的對應值");
                 }
                 public static T? EnumToStruct<TEnum, T>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where T : struct
                 {
                     T value;
                     bool isNull;
-                    if (DefaultConverter<TEnum>.MappingConverter<T>.TryGetValue(enumValue, out value, out isNull)) return isNull ? (T?)null : value;
+                    if (MappingConverter<TEnum, T>.TryGetValue(enumValue, out value, out isNull)) return isNull ? (T?)null : value;
                     throw new Exception($"未定義{enumValue}的對應值");
                 }
 
@@ -106,6 +106,10 @@ namespace Framework.Data
                 /// <param name="isCollection">是否為集合</param>
                 /// <returns></returns>
                 MethodInfo GetToValueMethod(bool isNullableEnum, bool isCollection);
+
+                /// <summary>取得object value 轉成Enum? object的Method</summary>
+                /// <returns></returns>
+                MethodInfo GetToEnumMethod();
             }
 
             #region Converter
@@ -131,6 +135,15 @@ namespace Framework.Data
 
                 protected virtual MethodInfo GetToValueMethodImp(bool isNullableEnum, bool isCollection) => 
                     ConverterHelper.GetDefaultConvertMethod(EnumType, underlyingValueType, isNullableEnum, isCollection);
+
+
+                public static TEnum? Parse(object value)
+                {
+                    return value == null || value == DBNull.Value ? (TEnum?)null : (TEnum)value;
+                }
+
+                private MethodInfo toEnumMethod = null;
+                public virtual MethodInfo GetToEnumMethod() => toEnumMethod ?? (toEnumMethod = this.GetType().GetMethod(nameof(Parse)));
             }
             #endregion
 
@@ -180,6 +193,16 @@ namespace Framework.Data
 
                 protected override MethodInfo GetToValueMethodImp(bool isNullableEnum, bool isCollection) => 
                     ConverterHelper.GetMappingConvertMethod(EnumType, underlyingValueType, isNullableEnum, isCollection);
+
+                public static TEnum? ParseMapping(object value)
+                {
+                    if (nullValue.HasValue && (value == null || value == DBNull.Value)) return nullValue.Value;
+                    TEnum val;
+                    return toEnumMap.TryGetValue((TDbValue)value, out val) ? val : (TEnum?)null;
+                }
+
+                private MethodInfo toEnumMethod = null;
+                public override MethodInfo GetToEnumMethod() => toEnumMethod ?? (toEnumMethod = this.GetType().GetMethod(nameof(ParseMapping)));
             }
             #endregion
 

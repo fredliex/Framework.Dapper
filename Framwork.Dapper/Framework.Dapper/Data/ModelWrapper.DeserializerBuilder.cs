@@ -214,6 +214,9 @@ namespace Framework.Data
                                 if (unboxedType == typeof(char) && fieldType == typeof(string)) continue;
                                 if (unboxedType.IsEnum)
                                 {
+                                    var enumInfo = EnumInfo.Get(unboxedType);
+                                    enumInfo
+
                                     if (fieldType == EnumValueHelper.GetValueUnderlyingType(unboxedType)) continue;
                                     if (Enum.GetUnderlyingType(unboxedType) == fieldType) continue;
                                     if (fieldType == typeof(string)) continue;

@@ -580,7 +580,7 @@ namespace Framework.Test
             [Column(NullMapping = 10)]
             public StringEnum? nullStrEnum;
 
-            [Column(NullMapping = 2D)] //docuble
+            [Column(NullMapping = 2D)] //double
             public string strCol;
 
             [Column(NullMapping = 3L)] //long
@@ -610,7 +610,7 @@ namespace Framework.Test
             var dict = new Dictionary<string, object>();
             dictFiller(dict, model);
             Assert.Equal(model.intCol, dict[nameof(DictionaryModel.intCol)]);
-            Assert.Equal(model.nullNorEnum, dict[nameof(DictionaryModel.nullNorEnum)]);
+            Assert.Equal((int)model.nullNorEnum, dict[nameof(DictionaryModel.nullNorEnum)]);
             Assert.Equal("cc", dict[nameof(DictionaryModel.nullStrEnum)]);
             Assert.Equal(model.strCol, dict[nameof(DictionaryModel.strCol)]);
             Assert.Equal(model.nullIntCol, dict[nameof(DictionaryModel.nullIntCol)]);

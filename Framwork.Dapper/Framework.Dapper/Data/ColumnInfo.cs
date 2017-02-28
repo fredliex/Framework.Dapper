@@ -63,6 +63,9 @@ namespace Framework.Data
             IsEnumerable = elemType != null;
             ElementType = elemType ?? type;
 
+            var isValueType = ElementType.IsValueType;
+            var nullableType = isValueType ? Nullable.GetUnderlyingType(ElementType) : null;
+
             //如果沒定義ColumnAttribute 或是 ColumnAttribute.Name 是null或是空白代表於類型名稱同名
             if (columnAttribute == null)
             {
@@ -77,12 +80,13 @@ namespace Framework.Data
                 IsKey = (behavior & ColumnBehavior.Key) != 0;
                 IsTrimRight = (behavior & ColumnBehavior.TrimRight) != 0;
                 //如果model屬性類型為可null的，則設定model屬性為null時資料庫對應的特定值
-                if (!ElementType.IsValueType || Nullable.GetUnderlyingType(ElementType) != null) NullMapping = columnAttribute.NullMapping;
+                if (!isValueType || nullableType != null) NullMapping = columnAttribute.NullMapping;
                 //如果是同步檢核的欄位的話, 則判斷model屬性類型必須為DateTime或是Nullable<DateTime>
                 if (IsConcurrencyCheck && ElementType != typeof(DateTime) && ElementType != typeof(DateTime?))
                     throw new InvalidOperationException("ColumnBehavior.ConcurrencyCheck只允許設定於類型為DateTime或Nullable<DateTime>的成員上。");
             }
-            if (ElementType.IsEnum) EnumInfo = EnumInfo.Get(ElementType);
+
+            EnumInfo = EnumInfo.Get(nullableType ?? ElementType);
 
             if (field != null)
             {
@@ -109,8 +113,8 @@ namespace Framework.Data
             if (EnumInfo != null)
             {
                 var isNullableEnum = Nullable.GetUnderlyingType(elemType) != null;
-                methodConvertEnum = EnumInfo.Converter.GetToValueMethod(isNullableEnum, IsEnumerable);
-                elemType = isNullableEnum ? EnumInfo.Converter.NullableValueType : EnumInfo.Converter.UnderlyingValueType;
+                methodConvertEnum = EnumInfo.Metadata.GetConverter(isNullableEnum, IsEnumerable);
+                elemType = isNullableEnum ? EnumInfo.Metadata.NullableValueType : EnumInfo.Metadata.UnderlyingValueType;
             }
             if (methodConvertEnum != null) expValue = Expression.Call(methodConvertEnum, expValue);
             if (!IsEnumerable && !elemType.IsClass) expValue = Expression.Convert(expValue, typeof(object));

@@ -30,7 +30,6 @@ namespace Framework.Data
             private static readonly MethodInfo trimRight = typeof(DeserializerBuilder).GetMethod(nameof(DeserializerBuilder.TrimRight), BindingFlags.Static | BindingFlags.NonPublic);
             private static readonly MethodInfo readChar = typeof(DeserializerBuilder).GetMethod(nameof(DeserializerBuilder.ReadChar), BindingFlags.Static | BindingFlags.NonPublic);
             private static readonly MethodInfo readGuid = typeof(DeserializerBuilder).GetMethod(nameof(DeserializerBuilder.ReadGuid), BindingFlags.Static | BindingFlags.NonPublic);
-            private static readonly MethodInfo parseEnum = typeof(DeserializerBuilder).GetMethod(nameof(DeserializerBuilder.ParseEnum), BindingFlags.Static | BindingFlags.NonPublic, null, new[] { typeof(string) }, null);
 
             private static string TrimRight(string str)
             {
@@ -48,21 +47,6 @@ namespace Framework.Data
                 if (value is byte[]) return new Guid((byte[])value);
                 if (value is string) return Guid.Parse((string)value);
                 return (Guid)value;
-            }
-
-            private static T ParseEnum<T>(string value)
-            {
-                return (T)Enum.Parse(typeof(T), value, true);
-            }
-
-            private static object ParseEnum(Type type, string value, bool allowNull)
-            {
-                if (value == null)
-                {
-                    if (allowNull) return null;
-                    throw new Exception($"無法將null轉成型別{type}");
-                }
-                return Enum.Parse(type, value, false);
             }
 
             // 仿dapper裡面的GenerateDeserializers
@@ -125,22 +109,31 @@ namespace Framework.Data
                 if (Reflect.Dapper.typeMap.ContainsKey(type) || type.FullName == Reflect.Dapper.LinqBinary) 
                     return Reflect.Dapper.GetStructDeserializer(type, effectiveType, startBound);
                 // Enum
-                if (effectiveType.IsEnum)
+                var enumInfo = EnumInfo.Get(effectiveType);
+                if (enumInfo != null)
                 {
-                    var enumInfo = EnumInfo.Get(effectiveType);
-                    //DbValue => Enum
-                    if (enumInfo.IsDbValueMapping)
+                    if(enumInfo.IsDbValueMapping)
                     {
+                        //parse dbValue to Enum
                         var expParmeter = Expression.Parameter(typeof(IDataReader));
-                        var expValue = Expression.Call(enumInfo.Converter.GetToEnumMethod(), Expression.Call(expParmeter, Reflect.IDataReader_GetValue, new[] { Expression.Constant(startBound) }));
+                        var expValue = Expression.Call(enumInfo.Metadata.GetObjectParser(true, nullableType != null), Expression.Call(expParmeter, Reflect.IDataReader_GetValue, new[] { Expression.Constant(startBound) }));
                         var expBody = Expression.Convert(expValue, typeof(object));
                         return Expression.Lambda<Func<IDataReader, object>>(expBody, new[] { expParmeter }).Compile();
-                    }
-                    //parse string to Enum
+                    } 
                     if (reader.GetFieldType(startBound) == typeof(string))
                     {
-                        var allowNull = nullableType != null;
-                        return r => ParseEnum(effectiveType, r.IsDBNull(0) ? null : r.GetString(startBound), allowNull);
+                        //parse string to Enum
+                        return nullableType != null ?
+                            new Func<IDataReader, object>(r =>
+                            {
+                                if (reader.IsDBNull(startBound)) throw new Exception($"無法將null轉為{effectiveType}");
+                                return Enum.Parse(effectiveType, reader.GetString(startBound), true);
+                            }) :
+                            new Func<IDataReader, object>(r =>
+                            {
+                                if (reader.IsDBNull(startBound)) return null;
+                                return Enum.Parse(effectiveType, reader.GetString(startBound), true);
+                            });
                     }
                     //呼叫Dapper內建的處理
                     return Reflect.Dapper.GetStructDeserializer(type, effectiveType, startBound);
@@ -212,13 +205,12 @@ namespace Framework.Data
                                 if (fieldType == unboxedType) continue;
                                 if (Reflect.Dapper.HasTypeHandler(unboxedType)) continue;
                                 if (unboxedType == typeof(char) && fieldType == typeof(string)) continue;
-                                if (unboxedType.IsEnum)
+                                var enumInfo = EnumInfo.Get(unboxedType);
+                                if (enumInfo != null)
                                 {
-                                    var enumInfo = EnumInfo.Get(unboxedType);
-                                    enumInfo
-
-                                    if (fieldType == EnumValueHelper.GetValueUnderlyingType(unboxedType)) continue;
-                                    if (Enum.GetUnderlyingType(unboxedType) == fieldType) continue;
+                                    //可能是fieldType = DbValueMapping，也可能是fieldType = Enum基礎型別
+                                    if (enumInfo.ValueType == fieldType) continue;
+                                    //可能是字串 parse 成Enum
                                     if (fieldType == typeof(string)) continue;
                                 }
                                 return false;
@@ -262,7 +254,6 @@ namespace Framework.Data
                     il.Emit(OpCodes.Ldloc_1);// [target]
                 }
 
-                var table = TableInfo.Get(type);
                 /* model.Enum -> EnumValue.NullValue -> ColumnAttribute.NullMapping -> database
                  * database -> Trim -> ColumnAttribute.NullMapping(特定值轉成null) -> EnumValue.NullValue(null轉成特定enum) -> model.Enum
                  * 
@@ -298,7 +289,9 @@ namespace Framework.Data
 
                 var allDone = il.DefineLabel();
                 int valueCopyLocal = il.DeclareLocal(typeof(object)).LocalIndex;     //valueCopyLocal是區域變數2, 放value值
-                foreach (var item in table.Columns)
+                var table = TableInfo.Get(type);
+                var columns = table.Columns;
+                foreach (var item in names.Select(n => columns.GetColumn(n)))
                 {
                     if (item != null)
                     {
@@ -350,59 +343,56 @@ namespace Framework.Data
                         }
                         else if (memberType == typeof(Guid) || memberType == typeof(Guid?))
                         {
-                            //04. 如果member是Guid或是Guid? ， value = ReadGuid(value)
+                            //05. 如果member是Guid或是Guid? ， value = ReadGuid(value)
                             il.EmitCall(OpCodes.Call, readGuid, null); // stack is now [target][target][typed-value]
                         }
-                        else
+                        else if (item.EnumInfo != null)
                         {
-                            var unboxType = nullUnderlyingType != null && nullUnderlyingType.IsEnum ? nullUnderlyingType : memberType;  //unboxType不是Enum就是 memberType
-                            if (unboxType.IsEnum)
+                            if (item.EnumInfo.IsDbValueMapping)
                             {
-                                var fromValueToEnum = EnumValueHelper.GetEnumGetterMethod(unboxType, out enumNullValue);
-                                if (fromValueToEnum != null)
-                                {
-                                    //05. 如果memberType有設定ValueAttribute的話, 把value轉成enum
-                                    il.EmitCall(OpCodes.Call, fromValueToEnum, null);  // stack is now [target][target][enum-value]
-                                }
-                                else if (colType == typeof(string))
-                                {
-                                    //07. 如果欄位是字串, Enum.Parse
-                                    il.EmitCall(OpCodes.Call, parseEnum.MakeGenericMethod(unboxType), null);  // stack is now [target][target][enum-value]
-                                }
-                                else
-                                {
-                                    //08. value = (enumType)(Enum基礎型別)value
-                                    Type numericType = Enum.GetUnderlyingType(unboxType);
-                                    Reflect.Dapper.FlexibleConvertBoxedFromHeadOfStack(il, colType, unboxType, numericType);
-                                }
+                                //06. 如果memberType是有設定DbValueAttribute的Enum話, 把value轉成enum
+                                il.EmitCall(OpCodes.Call, item.EnumInfo.Metadata.GetObjectParser(false, false), null);  // stack is now [target][target][enum-value]
                             }
-                            else if (memberType.FullName == Reflect.Dapper.LinqBinary)
+                            else if (colType == typeof(string))
                             {
-                                //09. 是System.Data.Linq.Binary的話，new System.Data.Linq.Binary((byte[])value)
-                                il.Emit(OpCodes.Unbox_Any, typeof(byte[])); // stack is now [target][target][byte-array]
-                                il.Emit(OpCodes.Newobj, memberType.GetConstructor(new Type[] { typeof(byte[]) }));// stack is now [target][target][binary]
-                            }
-                            else if (Reflect.Dapper.HasTypeHandler(unboxType))
-                            {
-#pragma warning disable 618
-                                //10. 有TypeHandler, 呼叫SqlMapper.TypeHandlerCache<T>.Parse(value)
-                                il.EmitCall(OpCodes.Call, typeof(TypeHandlerCache<>).MakeGenericType(unboxType).GetMethod(nameof(TypeHandlerCache<int>.Parse)), null); // stack is now [parameters] [parameters] [parameter]
-#pragma warning restore 618
+                                //07. 如果欄位是字串, Enum.Parse
+                                il.EmitCall(OpCodes.Call, item.EnumInfo.Metadata.GetStringParser(false), null);  // stack is now [target][target][enum-value]
                             }
                             else
                             {
-                                TypeCode dataTypeCode = Type.GetTypeCode(colType), unboxTypeCode = Type.GetTypeCode(unboxType);
-                                if (colType == unboxType || dataTypeCode == unboxTypeCode || dataTypeCode == Type.GetTypeCode(nullUnderlyingType))
-                                {
-                                    //11. 型別一致， value = (memberType)value
-                                    il.Emit(OpCodes.Unbox_Any, unboxType); // stack is now [target][target][typed-value]
-                                    isNullableConstructor = false;      //nullable的話已直接轉型, 所以不須透建構式
-                                }
-                                else
-                                {
-                                    //12. 型別不一致，必須透過中介轉型
-                                    Reflect.Dapper.FlexibleConvertBoxedFromHeadOfStack(il, colType, nullUnderlyingType ?? memberType, null);
-                                }
+                                //08. value = (enumType)(Enum基礎型別)value
+                                Reflect.Dapper.FlexibleConvertBoxedFromHeadOfStack(il, colType, item.EnumInfo.EnumType, item.EnumInfo.ValueType);
+                            }
+                        }
+                        else if (memberType.FullName == Reflect.Dapper.LinqBinary)
+                        {
+                            //09. 是System.Data.Linq.Binary的話，new System.Data.Linq.Binary((byte[])value)
+                            il.Emit(OpCodes.Unbox_Any, typeof(byte[])); // stack is now [target][target][byte-array]
+                            il.Emit(OpCodes.Newobj, memberType.GetConstructor(new Type[] { typeof(byte[]) }));// stack is now [target][target][binary]
+                        }
+                        /*
+                        //如果已經完美封裝, 理論上不需Dapper 的 TypeHandler
+                        else if (Reflect.Dapper.HasTypeHandler(unboxType))
+                        {
+#pragma warning disable 618
+                            //10. 有TypeHandler, 呼叫SqlMapper.TypeHandlerCache<T>.Parse(value)
+                            il.EmitCall(OpCodes.Call, typeof(TypeHandlerCache<>).MakeGenericType(unboxType).GetMethod(nameof(TypeHandlerCache<int>.Parse)), null); // stack is now [parameters] [parameters] [parameter]
+#pragma warning restore 618
+                        }
+                        */
+                        else
+                        {
+                            TypeCode dataTypeCode = Type.GetTypeCode(colType), unboxTypeCode = Type.GetTypeCode(memberType);
+                            if (colType == memberType || dataTypeCode == unboxTypeCode || dataTypeCode == Type.GetTypeCode(nullUnderlyingType))
+                            {
+                                //11. 型別一致， value = (memberType)value
+                                il.Emit(OpCodes.Unbox_Any, memberType); // stack is now [target][target][typed-value]
+                                isNullableConstructor = false;      //nullable的話已直接轉型, 所以不須透建構式
+                            }
+                            else
+                            {
+                                //12. 型別不一致，必須透過中介轉型
+                                Reflect.Dapper.FlexibleConvertBoxedFromHeadOfStack(il, colType, nullUnderlyingType ?? memberType, null);
                             }
                         }
                         //13. 如果是Nullable<> ， value = new Nullable<T>(value)

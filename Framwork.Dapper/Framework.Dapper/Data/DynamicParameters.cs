@@ -78,7 +78,7 @@ namespace Framework.Data
                     if (nullableType != null) elemType = nullableType;
                     if (elemType.IsEnum)
                     {
-                        var method = ModelWrapper.EnumInfo.Get(elemType).Converter.GetToValueMethod(isNullableType, isCollection);
+                        var method = ModelWrapper.EnumInfo.Get(elemType).Metadata.GetConverter(isNullableType, isCollection);
                         return method.Invoke(null, new object[] { value });
                     }
                     return value;

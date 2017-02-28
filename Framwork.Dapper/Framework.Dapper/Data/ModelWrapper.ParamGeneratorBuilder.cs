@@ -160,9 +160,13 @@ namespace Framework.Data
                         column.GenerateGetEmit(il);  // stack is [parameters] [command] [name] [typed-value]
 
                         //有定義EnumValue的話, 做轉換處理
-                        Type enumValueType;
-                        var enumValuesGetter = EnumValueHelper.GetValuesGetterMethod(memberType, out enumValueType);
-                        if (enumValuesGetter != null) il.EmitCall(OpCodes.Call, enumValuesGetter, null);     //stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
+                        if(column.EnumInfo != null)
+                        {
+                            var isNullableEnum = Nullable.GetUnderlyingType(column.ElementType) != null;
+                            var converter = column.EnumInfo.Metadata.GetConverter(isNullableEnum, true);
+                            il.EmitCall(OpCodes.Call, converter, null);     //stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
+                            memberType = converter.ReturnType;
+                        }
 
                         if (memberType.IsValueType) il.Emit(OpCodes.Box, memberType); // stack is [parameters] [command] [name] [boxed-value]
                         il.EmitCall(OpCodes.Call, Reflect.SqlMapper_PackListParameters, null); // stack is [parameters]
@@ -245,12 +249,12 @@ namespace Framework.Data
                         if (handler == null)
                         {
                             //01. 有定義EnumValue的話, 取得對應值, 同時memberType換成EnumValue
-                            Type enumValueType;
-                            var enumValueGetter = EnumValueHelper.GetValueGetterMethod(memberType, out enumValueType);
-                            if (enumValueGetter != null)
+                            if(column.EnumInfo != null)
                             {
-                                il.EmitCall(OpCodes.Call, enumValueGetter, null);     //stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
-                                memberType = enumValueType;
+                                var isNullableEnum = Nullable.GetUnderlyingType(memberType) != null;
+                                var enumConverter = column.EnumInfo.Metadata.GetConverter(isNullableEnum, false);
+                                il.EmitCall(OpCodes.Call, enumConverter, null);     //stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
+                                memberType = isNullableEnum ? column.EnumInfo.Metadata.NullableValueType : column.EnumInfo.Metadata.UnderlyingValueType;
                             }
 
                             //是Enum的話, 直接換成基礎型別

@@ -77,9 +77,7 @@ namespace Framework.Data
             return type != null && type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type) && type.FullName != Reflect.Dapper.LinqBinary;
         }
 
-        /// <summary>
-        /// 取得集合的元素類型
-        /// </summary>
+        /// <summary>取得集合的元素類型，這邊是資料庫的邏輯。譬如字串為非集合。</summary>
         /// <param name="type"></param>
         /// <returns>非集合的話回傳null</returns>
         internal static Type GetElementType(Type collectionType)

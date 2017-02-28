@@ -41,6 +41,11 @@ namespace Framework.Data
         protected string Schema { get; private set; }
         protected string Table { get; private set; }
 
+        /// <summary>建構式，可指定database、schema、table</summary>
+        /// <param name="conn">資料庫連線字串</param>
+        /// <param name="dataBase">指定database，不指定的話依照TableAttribute指示。</param>
+        /// <param name="schema">指定schema，不指定的話依照TableAttribute指示。</param>
+        /// <param name="table">指定table，不指定的話依照TableAttribute指示。</param>
         public Repository(IDbConnection conn, string dataBase = null, string schema = null, string table = null)
         {
             this.conn = conn;
@@ -66,7 +71,7 @@ namespace Framework.Data
         /// <summary>依照matedata來產生sql</summary>
         /// <param name="matedata"></param>
         /// <returns></returns>
-        protected virtual string GetSelectSql(ColumnInfoCollection columns)
+        protected virtual string GetSelectSql(MemberColumnInfoCollection columns)
         {
             var sqlStr = $"select * from {Table}";
             //if(parameters != null)

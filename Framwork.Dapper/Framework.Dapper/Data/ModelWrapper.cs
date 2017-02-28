@@ -47,15 +47,5 @@ namespace Framework.Data
 
             return cache.ParamWrapper(param);
         }
-
-        /// <summary>將資料填充到字典去。</summary>
-        /// <param name="dict"></param>
-        /// <param name="param"></param>
-        /// <returns>回傳dict本身</returns>
-        internal static IDictionary<string, object> FillDictionary(IDictionary<string, object> dict, object param)
-        {
-            throw new NotImplementedException();
-        }
-        
     }
 }

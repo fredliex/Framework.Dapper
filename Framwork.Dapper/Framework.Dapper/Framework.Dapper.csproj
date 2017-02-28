@@ -55,6 +55,7 @@
     <Compile Include="Data\IDbHook.cs" />
     <Compile Include="Data\IDataModel.cs" />
     <Compile Include="Data\InternalHelper.cs" />
+    <Compile Include="Data\MemberColumnInfo.cs" />
     <Compile Include="Data\ModelWrapper.Cache.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
@@ -65,7 +66,7 @@
     <Compile Include="Data\ModelWrapper.EnumerableParamWrapper.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
-    <Compile Include="Data\ModelWrapper.EnumValueHelper.cs">
+    <Compile Include="Data\ModelWrapper.EnumInfo.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
     <Compile Include="Data\ModelWrapper.ParamGeneratorBuilder.cs">

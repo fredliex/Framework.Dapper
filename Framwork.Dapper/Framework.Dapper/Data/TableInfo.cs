@@ -38,7 +38,7 @@ namespace Framework.Data
         internal bool HasModelInterface { get; private set; }
 
         /// <summary>欄位資訊</summary>
-        public ColumnInfoCollection Columns { get; private set; }
+        public MemberColumnInfoCollection Columns { get; private set; }
 
         private TableInfo(Type modelType)
         {
@@ -58,7 +58,7 @@ namespace Framework.Data
             if (string.IsNullOrWhiteSpace(Schema)) Schema = null;
             if (string.IsNullOrWhiteSpace(Table)) Table = modelType.Name;
 
-            Columns = new ColumnInfoCollection(Type, HasModelInterface, IsStructModel);
+            Columns = new MemberColumnInfoCollection(Type, HasModelInterface, IsStructModel);
         }
 
 

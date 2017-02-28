@@ -151,7 +151,7 @@ namespace Framework.Data
                     }
 
                     //如果是集合的話, 就處理"in", 這邊按原本Dapper邏輯處理
-                    if (column.IsEnumerable)
+                    if (column.IsMultiValue)
                     {
                         // this actually represents special handling for list types;
                         il.Emit(OpCodes.Ldarg_0); // stack is now [parameters] [command]
@@ -521,7 +521,7 @@ namespace Framework.Data
             }
 
             //仿Dapper.SqlMapper.FilterParameters
-            private static IEnumerable<ColumnInfo> FilterParameters(IEnumerable<ColumnInfo> parameters, string sql)
+            private static IEnumerable<T> FilterParameters<T>(IEnumerable<T> parameters, string sql) where T : ColumnInfo
             {
                 return parameters.Where(p => Regex.IsMatch(sql, @"[?@:]" + p.MemberName + "([^a-z0-9_]+|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant));
             }

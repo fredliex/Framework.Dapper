@@ -123,7 +123,7 @@ namespace Framework.Data
                     if (reader.GetFieldType(startBound) == typeof(string))
                     {
                         //parse string to Enum
-                        return nullableType != null ?
+                        return nullableType == null ?
                             new Func<IDataReader, object>(r =>
                             {
                                 if (reader.IsDBNull(startBound)) throw new Exception($"無法將null轉為{effectiveType}");

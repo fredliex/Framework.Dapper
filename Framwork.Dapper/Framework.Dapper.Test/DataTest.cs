@@ -556,7 +556,6 @@ namespace Framework.Test
             for (var i = 0; i < 10000; i++) dictC.Contains(StructuralComparisons.StructuralEqualityComparer.GetHashCode(node));
             Trace.WriteLine(watch.ElapsedTicks);
 
-            return;
             Assert.Equal(3, QueryData<int>("select 3"));
             Assert.Equal("aaa", QueryData<string>("select 'aaa'"));
             Assert.Equal('a', QueryData<char>("select 'a'"));

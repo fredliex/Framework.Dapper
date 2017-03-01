@@ -289,7 +289,7 @@ namespace Framework.Data
 
                 var allDone = il.DefineLabel();
                 int valueCopyLocal = il.DeclareLocal(typeof(object)).LocalIndex;     //valueCopyLocal是區域變數2, 放value值
-                var table = TableInfo.Get(type);
+                var table = ModelTableInfo.Get(type);
                 var columns = table.Columns;
                 foreach (var item in names.Select(n => columns.GetColumn(n)))
                 {

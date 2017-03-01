@@ -10,7 +10,7 @@ using static Framework.Data.ModelWrapper;
 
 namespace Framework.Data
 {
-    internal sealed class MemberColumnInfo : ColumnInfo
+    internal sealed class ModelColumnInfo : ColumnInfo
     {
         /// <summary>成員</summary>
         internal MemberInfo Member { get; private set; }
@@ -21,17 +21,10 @@ namespace Framework.Data
         /// <summary>產生set值的emit。</summary>
         internal Action<ILGenerator> GenerateSetEmit { get; private set; }
 
-        private MemberColumnInfo(PropertyInfo property, FieldInfo field, ColumnAttribute columnAttribute, bool isStructModel) : 
+        private ModelColumnInfo(PropertyInfo property, FieldInfo field, ColumnAttribute columnAttribute, bool isStructModel) : 
             base(property?.Name ?? field?.Name, property?.PropertyType ?? field?.FieldType, columnAttribute)
         {
             Member = (MemberInfo)property ?? field;
-
-            //var memberType = member.MemberType;
-            //var field = memberType == MemberTypes.Field ? (FieldInfo)member : null;
-            //var property = field == null & memberType == MemberTypes.Property ? (PropertyInfo)member : null;
-            var type = field?.FieldType ?? property?.PropertyType;
-            var elemType = InternalHelper.GetElementType(type); //抓取集合元素型別, 回傳null表示非集合
-
             if (field != null)
             {
                 GenerateGetEmit = il => il.Emit(OpCodes.Ldfld, field);
@@ -70,7 +63,7 @@ namespace Framework.Data
             return expValue;
         }
 
-        private static MethodInfo methodConvertListNull = typeof(ColumnInfo).GetMethod(nameof(ConvertListNull), BindingFlags.Static | BindingFlags.NonPublic);
+        private static MethodInfo methodConvertListNull = typeof(ModelColumnInfo).GetMethod(nameof(ConvertListNull), BindingFlags.Static | BindingFlags.NonPublic);
         private static List<object> ConvertListNull(IEnumerable<object> list, object nullValue) => list?.Select(n => n ?? nullValue).ToList();
         #endregion
 
@@ -80,12 +73,12 @@ namespace Framework.Data
         /// <param name="isDataModel">是否有繼承IDataModel</param>
         /// <param name="isStructType">model是否為值類型</param>
         /// <returns></returns>
-        internal static IEnumerable<MemberColumnInfo> Resolve(Type modelType, bool? isDataModel = null, bool? isStructModel = null)
+        internal static IEnumerable<ModelColumnInfo> Resolve(Type modelType, bool? isDataModel = null, bool? isStructModel = null)
         {
             if (!isDataModel.HasValue) isDataModel = typeof(IDataModel).IsAssignableFrom(modelType);
             if (!isStructModel.HasValue) isStructModel = modelType.IsValueType;
 
-            IEnumerable<MemberColumnInfo> columns;
+            IEnumerable<ModelColumnInfo> columns;
             if (isDataModel.Value)
             {
                 //這邊只是為了建立一個空的匿名物件字典, key是member name
@@ -121,7 +114,7 @@ namespace Framework.Data
                 }
                 columns = memberDict.OrderBy(n => n.Key).Select(n => {
                     var isField = n.Value.isField;
-                    return new MemberColumnInfo(isField ? null : (PropertyInfo)n.Value.member, isField ? (FieldInfo)n.Value.member : null, n.Value.attr, isStructModel.Value);
+                    return new ModelColumnInfo(isField ? null : (PropertyInfo)n.Value.member, isField ? (FieldInfo)n.Value.member : null, n.Value.attr, isStructModel.Value);
                 });
             }
             else
@@ -129,14 +122,14 @@ namespace Framework.Data
                 //沒實作IDataModel時, 只抓public屬性, 不需逐繼承鍊處理
                 columns = modelType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
                     .Where(p => p.GetIndexParameters().Length == 0)
-                    .Select(p => new MemberColumnInfo(p, null, p.GetAttribute<ColumnAttribute>(false), isStructModel.Value))
+                    .Select(p => new ModelColumnInfo(p, null, p.GetAttribute<ColumnAttribute>(false), isStructModel.Value))
                     .OrderBy(n => n.Member.Name);
             }
             return SortColumn(modelType, columns);
         }
 
         //判斷是不是像tuple, 是的話就依照建構式排序, 否則依照原本名稱排序的方式
-        private static List<MemberColumnInfo> SortColumn(Type modelType, IEnumerable<MemberColumnInfo> columns)
+        private static List<ModelColumnInfo> SortColumn(Type modelType, IEnumerable<ModelColumnInfo> columns)
         {
             var listByName = columns.ToList();
             //如果建構式不只一個, 或是建構式的參數數量和欄位數不符, 就不改變排序
@@ -146,8 +139,8 @@ namespace Framework.Data
             if (listByName.Count != ctorParams.Length) return listByName;
             //如果建構式只有一個, 且參數與欄位名稱相符, 就改用參數的順序回傳, 否則就傳回原順序
             var dict = listByName.ToDictionary(n => n.MemberName, StringComparer.OrdinalIgnoreCase);
-            var listByCtor = new List<MemberColumnInfo>(ctorParams.Length);
-            MemberColumnInfo tmpInfo;
+            var listByCtor = new List<ModelColumnInfo>(ctorParams.Length);
+            ModelColumnInfo tmpInfo;
             for (var i = 0; i < ctorParams.Length; i++)
             {
                 if (!dict.TryGetValue(ctorParams[i].Name, out tmpInfo)) return listByName;
@@ -159,7 +152,7 @@ namespace Framework.Data
 
         #region 將Model轉成Dictionary
         private static MethodInfo methodDictionaryItemSet = typeof(IDictionary<string, object>).GetProperties().First(p => p.GetIndexParameters().Length > 0).GetSetMethod();
-        internal static Action<IDictionary<string, object>, object> GenerateDictionaryFiller(Type modelType, IEnumerable<MemberColumnInfo> columns)
+        internal static Action<IDictionary<string, object>, object> GenerateDictionaryFiller(Type modelType, IEnumerable<ModelColumnInfo> columns)
         {
             var expParamDict = Expression.Parameter(typeof(IDictionary<string, object>));
             var expParamObject = Expression.Parameter(typeof(object));

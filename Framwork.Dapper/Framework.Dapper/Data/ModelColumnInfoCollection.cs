@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace Framework.Data
 {
-    internal sealed class MemberColumnInfoCollection : IReadOnlyCollection<MemberColumnInfo>
+    internal sealed class ModelColumnInfoCollection : IReadOnlyCollection<ModelColumnInfo>
     {
-        private MemberColumnInfo[] cols;
+        private ModelColumnInfo[] cols;
 
         //由member name所建立的dictionary, value為欄位序, lazy產生
         private Dictionary<string, int> memberMap;
@@ -22,11 +22,11 @@ namespace Framework.Data
 
         #region 實作IReadOnlyCollection<ColumnInfo>
         public int Count => cols.Length;
-        public IEnumerator<MemberColumnInfo> GetEnumerator() => ((IEnumerable<MemberColumnInfo>)cols).GetEnumerator();
+        public IEnumerator<ModelColumnInfo> GetEnumerator() => ((IEnumerable<ModelColumnInfo>)cols).GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => cols.GetEnumerator();
         #endregion
 
-        internal MemberColumnInfoCollection(IEnumerable<MemberColumnInfo> columns)
+        internal ModelColumnInfoCollection(IEnumerable<ModelColumnInfo> columns)
         {
             cols = columns.ToArray();
             memberMap = new Dictionary<string, int>(cols.Length);
@@ -43,18 +43,16 @@ namespace Framework.Data
             }
         }
 
-        public MemberColumnInfo GetColumn(string columnName)
+        public ModelColumnInfo GetColumn(string columnName)
         {
             int colIndex;
             return columnMap.TryGetValue(columnName, out colIndex) ? cols[colIndex] : null;
         }
 
-        /*
         internal static Action<IDictionary<string, object>, object> GenerateDictionaryFiller(Type modelType)
         {
-            return MemberColumnInfo.GenerateDictionaryFiller(modelType, TableInfo.Get(modelType).Columns.Cast<MemberColumnInfo>());
+            return ModelColumnInfo.GenerateDictionaryFiller(modelType, ModelTableInfo.Get(modelType).Columns);
         }
-        */
 
     }
 }

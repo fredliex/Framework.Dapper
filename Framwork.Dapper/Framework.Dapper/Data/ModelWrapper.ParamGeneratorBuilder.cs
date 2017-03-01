@@ -42,6 +42,7 @@ namespace Framework.Data
                     _memberType = value;
                 }
             }
+
             private DbType dbType
             {
                 get
@@ -110,7 +111,7 @@ namespace Framework.Data
 
             internal Action<IDbCommand, object> CreateGenerator()
             {
-                var table = TableInfo.Get(modelType);
+                var table = ModelTableInfo.Get(modelType);
 
                 il.Emit(OpCodes.Ldarg_1); // stack is now [untyped-param]
                 if (table.IsStructModel)
@@ -423,7 +424,7 @@ namespace Framework.Data
 #endif
             }
 
-            private void ReplaceLiteral(IEnumerable<ColumnInfo> columns)
+            private void ReplaceLiteral(IEnumerable<ModelColumnInfo> columns)
             {
                 //仿Dapper的邏輯處理 {=aaaa} 這種東西, 簡單的說就是sql字串替換
                 var literals = Reflect.Dapper.GetLiteralTokens(sql);
@@ -437,7 +438,7 @@ namespace Framework.Data
                     foreach (var literal in literals)
                     {
                         // find the best member, preferring case-sensitive
-                        ColumnInfo exact = null, fallback = null;
+                        ModelColumnInfo exact = null, fallback = null;
                         string huntName = literal.Member;
                         foreach (var column in columns)
                         {

@@ -8,33 +8,31 @@ namespace Framework.Data
 {
     internal sealed class RepositoryMatedata
     {
-        internal List<ColumnInfo> Columns { get; private set; }
+        public object Model;
+        public object Param;
+        public IEnumerable<ColumnInfo> ParamColumns { get; private set; }
 
-        public RepositoryMatedata(object data, TableInfo tableInfo)
+        public string SqlStr;
+
+        public RepositoryMatedata(object model, object param)
         {
-            if (data == null) Columns = new List<ColumnInfo>();
+            Model = model;
+            Param = param;
+            ParamColumns = ResolveParamColumns(param);
+        }
 
-            var type = data.GetType();
+        private static IEnumerable<ColumnInfo> ResolveParamColumns(object param)
+        {
+            var dict = param as IDictionary<string, object>;
+            if (dict != null) return ColumnInfo.Resolve(new[] { dict });
 
-            if (data is IEnumerable<KeyValuePair<string, object>>)
-            {
-                if (data is string) throw new ArgumentException("data不可為字串");
+            var dicts = param as IEnumerable<IDictionary<string, object>>;
+            if (dicts != null) return ColumnInfo.Resolve(dicts);
 
+            var paramType = param.GetType();
+            var elemType = InternalHelper.GetElementType(paramType);
 
-            }
-
-                if (tableInfo == null) tableInfo = TableInfo.Get(type);
-            
-
-
-
-
-
-
-
-
-
-
+            return ModelTableInfo.Get(elemType ?? paramType).Columns;
         }
     }
 }

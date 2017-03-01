@@ -49,13 +49,13 @@
     <Compile Include="Data\ColumnAttribute.cs" />
     <Compile Include="Data\ColumnBehavior.cs" />
     <Compile Include="Data\ColumnInfo.cs" />
-    <Compile Include="Data\ColumnInfoCollection.cs" />
+    <Compile Include="Data\ModelColumnInfoCollection.cs" />
     <Compile Include="Data\DbHelper.cs" />
     <Compile Include="Data\DynamicParameters.cs" />
     <Compile Include="Data\IDbHook.cs" />
     <Compile Include="Data\IDataModel.cs" />
     <Compile Include="Data\InternalHelper.cs" />
-    <Compile Include="Data\MemberColumnInfo.cs" />
+    <Compile Include="Data\ModelColumnInfo.cs" />
     <Compile Include="Data\ModelWrapper.Cache.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
@@ -88,7 +88,7 @@
     </Compile>
     <Compile Include="Data\RepositoryMatedata.cs" />
     <Compile Include="Data\TableAttribute.cs" />
-    <Compile Include="Data\TableInfo.cs" />
+    <Compile Include="Data\ModelTableInfo.cs" />
     <Compile Include="Data\DbValueAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

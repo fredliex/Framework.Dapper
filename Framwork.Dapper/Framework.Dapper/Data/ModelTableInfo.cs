@@ -9,14 +9,14 @@ using System.Threading.Tasks;
 
 namespace Framework.Data
 {
-    internal sealed class TableInfo
+    internal sealed class ModelTableInfo
     {
-        private static ConcurrentDictionary<Type, TableInfo> cache = new ConcurrentDictionary<Type, TableInfo>();
+        private static ConcurrentDictionary<Type, ModelTableInfo> cache = new ConcurrentDictionary<Type, ModelTableInfo>();
 
         /// <summary>取得Table資訊</summary>
-        internal static TableInfo Get(Type modelType)
+        internal static ModelTableInfo Get(Type modelType)
         {
-            return cache.GetOrAdd(modelType, t => new TableInfo(t));
+            return cache.GetOrAdd(modelType, t => new ModelTableInfo(t));
         }
 
         /// <summary>資料庫名稱</summary>
@@ -38,9 +38,9 @@ namespace Framework.Data
         internal bool HasModelInterface { get; private set; }
 
         /// <summary>欄位資訊</summary>
-        public MemberColumnInfoCollection Columns { get; private set; }
+        public ModelColumnInfoCollection Columns { get; private set; }
 
-        private TableInfo(Type modelType)
+        private ModelTableInfo(Type modelType)
         {
             Type = modelType;
             IsStructModel = modelType.IsValueType;
@@ -58,10 +58,8 @@ namespace Framework.Data
             if (string.IsNullOrWhiteSpace(Schema)) Schema = null;
             if (string.IsNullOrWhiteSpace(Table)) Table = modelType.Name;
 
-            Columns = new MemberColumnInfoCollection(Type, HasModelInterface, IsStructModel);
+            Columns = new ModelColumnInfoCollection(ModelColumnInfo.Resolve(Type, HasModelInterface, IsStructModel));
         }
-
-
 
 
 

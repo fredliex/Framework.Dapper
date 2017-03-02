@@ -10,6 +10,7 @@ namespace Framework.Data
     {
         public object Model;
         public object Param;
+        /// <summary>如果Param是null的話，ParamColumns也會是null。</summary>
         public IEnumerable<ColumnInfo> ParamColumns { get; private set; }
 
         public string SqlStr;
@@ -23,6 +24,8 @@ namespace Framework.Data
 
         private static IEnumerable<ColumnInfo> ResolveParamColumns(object param)
         {
+            if (param == null) return null;
+
             var dict = param as IDictionary<string, object>;
             if (dict != null) return ColumnInfo.Resolve(new[] { dict });
 

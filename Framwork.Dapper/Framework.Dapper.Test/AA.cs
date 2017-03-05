@@ -10,6 +10,20 @@ using static Framework.Test.DataTest;
 
 namespace Framework.Dapper.Test
 {
+    public abstract class BaseClass
+    {
+        public abstract string a { get; }
+    }
+
+    public sealed class ImpClass : BaseClass
+    {
+        private string privA = "A";
+        public override string a
+        {
+            get { return privA; }
+        }
+    }
+
     class AA
     {
         public static void DynamicCreate(IDbCommand dbCommand, object obj)

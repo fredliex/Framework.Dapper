@@ -164,6 +164,12 @@ namespace Framework.Data
             var lambda = Expression.Lambda<Action<IDictionary<string, object>, object>>(expBlock, new[] { expParamDict, expParamObject });
             return lambda.Compile();
         }
+
+        //這邊用ModelTableInfo.Get是為了cache, 不然其實直接用 Resolve 就足夠了
+        internal static Action<IDictionary<string, object>, object> GenerateDictionaryFiller(Type modelType) =>
+            GenerateDictionaryFiller(modelType, ModelTableInfo.Get(modelType).Columns);
+
+
         #endregion
     }
 }

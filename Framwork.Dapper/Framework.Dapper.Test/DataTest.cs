@@ -44,10 +44,15 @@ namespace Framework.Test
 
         private static T QueryData<T>(string sql)
         {
-            using (var conn = DbHelper.OpenConnection("test.local"))
+            using (var conn = OpenConnection())
             {
                 return conn.Query<T>(sql).FirstOrDefault();
             }
+        }
+
+        private static IDbConnection OpenConnection()
+        {
+            return DbHelper.OpenConnection("test.local");
         }
 
         #region 非IDataModel物件
@@ -595,7 +600,6 @@ namespace Framework.Test
         [Fact(DisplayName = "Model轉Dictionary")]
         public void Model轉Dictionary()
         {
-            var dictFiller = ModelColumnInfoCollection.GenerateDictionaryFiller(typeof(DictionaryModel));
             var model = new DictionaryModel
             {
                 intCol = 30,
@@ -606,8 +610,7 @@ namespace Framework.Test
                 nullStrEnum = StringEnum.C,
                 nullStrEnumArray = new StringEnum?[] { StringEnum.A, StringEnum.B, StringEnum.C }
             };
-            var dict = new Dictionary<string, object>();
-            dictFiller(dict, model);
+            var dict = DataModelHelper.ToDictionary(model);
             Assert.Equal(model.intCol, dict[nameof(DictionaryModel.intCol)]);
             Assert.Equal((int)model.nullNorEnum, dict[nameof(DictionaryModel.nullNorEnum)]);
             Assert.Equal("cc", dict[nameof(DictionaryModel.nullStrEnum)]);
@@ -617,9 +620,8 @@ namespace Framework.Test
             Assert.True(((IEnumerable<object>)dict[nameof(DictionaryModel.nullStrEnumArray)]).SequenceEqual(new object[] { "aa", "bb", "cc" }));
 
             // null mapping 
-            dict.Clear();
             model = new DictionaryModel { nullStrEnumArray = new StringEnum?[] { null, null, null } };
-            dictFiller(dict, model);
+            dict = DataModelHelper.ToDictionary(model);
             Assert.Equal("A", dict[nameof(DictionaryModel.nullNorEnum)]);
             Assert.Equal(10, dict[nameof(DictionaryModel.nullStrEnum)]);
             Assert.Equal(2D, dict[nameof(DictionaryModel.strCol)]);
@@ -628,5 +630,16 @@ namespace Framework.Test
             Assert.True(((IEnumerable<object>)dict[nameof(DictionaryModel.nullStrEnumArray)]).SequenceEqual(new object[] { 10, 10, 10 }));
         }
         #endregion
+
+        [Fact(DisplayName = "Repository-DataModel")]
+        public void RepositoryDataModel()
+        {
+            //var model = new EnumMappingModel { decimalCol = 1, intCol = 2, norEnum = NormalEnum.C, strCol = "A", strEnum = StringEnum.C };
+            using(var conn = OpenConnection())
+            {
+                var data = Repository.Select<EnumMappingModel>(conn, new { strCol = new[] { "1", "2" } }).ToList();
+            }
+            
+        }
     }
 }

@@ -109,5 +109,6 @@ namespace Framework.Data
             return !type.IsValueType || Nullable.GetUnderlyingType(type) != null;
         }
 
+
     }
 }

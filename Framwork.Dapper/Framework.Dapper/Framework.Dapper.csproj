@@ -49,6 +49,14 @@
     <Compile Include="Data\ColumnAttribute.cs" />
     <Compile Include="Data\ColumnBehavior.cs" />
     <Compile Include="Data\ColumnInfo.cs" />
+    <Compile Include="Data\DataModelHelper.cs" />
+    <Compile Include="Data\DbWrapperHelper.cs" />
+    <Compile Include="Data\DbWrapperHelper.IWrappedDb.cs">
+      <DependentUpon>DbWrapperHelper.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\DbWrapperHelper.WrapperBuilder.cs">
+      <DependentUpon>DbWrapperHelper.cs</DependentUpon>
+    </Compile>
     <Compile Include="Data\ModelColumnInfoCollection.cs" />
     <Compile Include="Data\DbHelper.cs" />
     <Compile Include="Data\DynamicParameters.cs" />

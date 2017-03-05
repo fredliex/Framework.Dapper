@@ -11,11 +11,14 @@ namespace Framework.Data
 {
     public static partial class Repository
     {
-
+        public static IEnumerable<T> Select<T>(IDbConnection conn, object param = null) where T : IDataModel
+        {
+            return new Repository<T>(conn).Select(param);
+        }
 
     }
 
-    internal class Repository<T>
+    public class Repository<T>
     {
         private static ModelTableInfo tableInfo = ModelTableInfo.Get(typeof(T));
 
@@ -37,7 +40,7 @@ namespace Framework.Data
             Schema = schema ?? tableInfo.Schema;
             Table = table ?? tableInfo.Table;
 
-            FullTableName = table;
+            FullTableName = Table;
             if (Schema != null) FullTableName = $"{Schema}.{FullTableName}";
             if (DataBase != null) FullTableName = $"{DataBase}.{FullTableName}";
         }
@@ -56,7 +59,7 @@ namespace Framework.Data
         /// <summary>依照matedata來產生sql</summary>
         /// <param name="matedata"></param>
         /// <returns></returns>
-        protected virtual RepositoryMatedata GetSelectMetadata(RepositoryMatedata metadata)
+        private RepositoryMatedata GetSelectMetadata(RepositoryMatedata metadata)
         {
             var sqlStr = $"select * from {FullTableName}";
             var filters = metadata.ParamColumns?.Select(n => string.Format("{0} {1} @{0}", n.ColumnName, n.IsMultiValue ? "in" : "=")).ToList();
@@ -82,31 +85,27 @@ namespace Framework.Data
         /// <summary>依照matedata來產生sql</summary>
         /// <param name="matedata"></param>
         /// <returns></returns>
-        protected RepositoryMatedata GetUpdateMetadata(RepositoryMatedata metadata)
+        private RepositoryMatedata GetUpdateMetadata(RepositoryMatedata metadata)
         {
-            var fields = tableInfo.Columns.Select(n => $"{n.ColumnName}=@{n.MemberName}").ToList();
-
             //如果參數沒有定義Iskey或IsConcurrencyCheck的話，代表所有欄位都是條件
             var filterColumns = metadata.ParamColumns.Where(n => n.IsKey || n.IsConcurrencyCheck).ToList();
             if (filterColumns.Count == 0) filterColumns = metadata.ParamColumns.ToList();
-
-             var filters = metadata.ParamColumns?.Select(n => string.Format("{0} {1} @{0}", n.ColumnName, n.IsMultiValue ? "in" : "=")).ToList();
-            if (filters != null && filters.Count > 0) sqlStr += " where " + string.Join(" and ", filters);
-
+            var paramValues = DataModelHelper.ToDictionary(metadata.Param);
+            var newParam = new DynamicParameters(metadata.Model);
+            var filters = filterColumns.Select(n =>
+            {
+                var paramName = "_key_" + n.MemberName;
+                newParam.Add(paramName, paramValues[n.MemberName]);
+                return $"{n.ColumnName}=@{paramName}";
+            }).ToList();
 
             var sqlStr = $"update {FullTableName} set ";
-            if (metadata.ParamColumns.Any())
-            {
-                var filters = metadata.ParamColumns.Select(n => string.Format("{0} {1} @{0}", n.ColumnName, n.IsMultiValue ? "in" : "="));
-                sqlStr += " where " + string.Join(" and ", filters);
-            }
+            sqlStr += string.Join(",", tableInfo.Columns.Select(n => $"{n.ColumnName}=@{n.MemberName}"));
+            sqlStr += " where " + string.Join(" and ", filters);
+
             metadata.SqlStr = sqlStr;
+            metadata.Param = newParam;
             return metadata;
-
-
-            DateTimeOffset
-            TODO
-
         }
         #endregion
     }

@@ -31,10 +31,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Dapper, Version=1.50.2.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Dapper.1.50.2\lib\net451\Dapper.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -50,13 +46,10 @@
     <Compile Include="Data\ColumnBehavior.cs" />
     <Compile Include="Data\ColumnInfo.cs" />
     <Compile Include="Data\DataModelHelper.cs" />
-    <Compile Include="Data\DbWrapperHelper.cs" />
-    <Compile Include="Data\DbWrapperHelper.IWrappedDb.cs">
-      <DependentUpon>DbWrapperHelper.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Data\DbWrapperHelper.WrapperBuilder.cs">
-      <DependentUpon>DbWrapperHelper.cs</DependentUpon>
-    </Compile>
+    <Compile Include="Data\_DbWrapper\DbWrapperHelper.cs" />
+    <Compile Include="Data\_DbWrapper\DbConnectionWrapper.cs" />
+    <Compile Include="Data\_DbWrapper\DbWrapperHelper.DbIntercept.cs" />
+    <Compile Include="Data\_DbWrapper\DbWrapperHelper.IWrappedDb.cs" />
     <Compile Include="Data\ModelColumnInfoCollection.cs" />
     <Compile Include="Data\DbHelper.cs" />
     <Compile Include="Data\DynamicParameters.cs" />
@@ -102,6 +95,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\dapper-dot-net\Dapper\Dapper.csproj">
+      <Project>{bfd557d1-8489-428d-aef3-47cc1c9db07f}</Project>
+      <Name>Dapper</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

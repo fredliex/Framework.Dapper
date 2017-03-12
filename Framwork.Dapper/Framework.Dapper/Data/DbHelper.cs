@@ -29,12 +29,30 @@ namespace Framework.Data
             return hook == null ? func(command) : hook.CommandExecute(command, func);
         }
 
-        public static IDbConnection OpenConnection(string connName)
+        //放置連線字串名稱所對應的 Func<DbConnection>
+        private static Hashtable cacheConnectionCreator = new Hashtable();
+        public static DbConnectionWrapper OpenConnection(string connName)
         {
-            var setting = ConfigurationManager.ConnectionStrings[connName];
-            var factory = DbProviderFactories.GetFactory(setting.ProviderName);
-            var conn = factory.CreateConnection();
-            conn.ConnectionString = setting.ConnectionString;
+            var connCreator = (Func<DbConnectionWrapper>)cacheConnectionCreator[connName];
+            if (connCreator == null)
+            {
+                lock(cacheConnectionCreator)
+                {
+                    var setting = ConfigurationManager.ConnectionStrings[connName];
+                    var connString = setting.ConnectionString;
+                    var factory = DbProviderFactories.GetFactory(setting.ProviderName);
+                    var factoryWrapper = DbWrapperHelper.Wrap(factory);
+                    Func<DbConnectionWrapper> tmpConnCreator = () =>
+                    {
+                        var newConn = (DbConnectionWrapper)factoryWrapper.CreateConnection();
+                        newConn.ConnectionString = connString;
+                        return newConn;
+                    };
+                    connCreator = (Func<DbConnectionWrapper>)cacheConnectionCreator[connName];
+                    if (connCreator == null) cacheConnectionCreator[connName] = connCreator = tmpConnCreator;
+                }
+            }
+            var conn = connCreator();
             conn.Open();
             return conn;
         }

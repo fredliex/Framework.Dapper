@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,7 +11,7 @@ namespace Framework.Data
     /// <summary>
     /// 
     /// </summary>
-    public interface IDbHook
+    public interface IDbCommandIntercept
     {
         /// <summary>
         /// 
@@ -19,6 +20,6 @@ namespace Framework.Data
         /// <param name="command"></param>
         /// <param name="executeDelegate"></param>
         /// <returns></returns>
-        T CommandExecute<T>(IDbCommand command, Func<IDbCommand, T> executeDelegate);
+        T CommandExecute<T>(DbCommand command, Func<DbCommand, T> executeDelegate);
     }
 }

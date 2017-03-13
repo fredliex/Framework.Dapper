@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
@@ -15,6 +16,14 @@ namespace Framework.Data
 {
     public static partial class DbWrapperHelper
     {
+        private static IDbCommandIntercept dbCommandIntercept;
+        static DbWrapperHelper()
+        {
+            var dbCommandInterceptType = ConfigurationManager.AppSettings["DbCommandInterceptType"];
+            dbCommandIntercept = string.IsNullOrWhiteSpace(dbCommandInterceptType) ? 
+                null : (IDbCommandIntercept)Activator.CreateInstance(Type.GetType(dbCommandInterceptType));
+        }
+
         private static string assemblyName = "DbWrapper";
 #if saveParamAssembly
         private static AssemblyBuilder assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.RunAndSave);

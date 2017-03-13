@@ -30,12 +30,9 @@ namespace Framework.Data
                     var types = new[] { factory.GetType(), connType, transType, command.GetType(), parameter.GetType(), command.Parameters.GetType() };
                     command.Dispose();
                     var interceptType = typeof(DbIntercept<,,,,,>).MakeGenericType(types);
-                    //呼叫DbIntercept.InitProviderFactory
-                    const string initMethodName = nameof(DbIntercept<DbProviderFactory, DbConnection, DbTransaction, DbCommand, DbParameter, DbParameterCollection>.InitProviderFactory);
-                    interceptType.GetMethod(initMethodName).Invoke(null, new[] { factory });
-                    //設定 providerFactoryWrapper = DbIntercept.wrapProviderFactory
-                    const string fieldName = nameof(DbIntercept<DbProviderFactory, DbConnection, DbTransaction, DbCommand, DbParameter, DbParameterCollection>.wrapProviderFactory);
-                    wrapper = (Func<DbProviderFactory, DbProviderFactory>)interceptType.GetField(fieldName).GetValue(null);
+                    //呼叫DbIntercept.InitProviderAndGetWrapper
+                    const string methodName = nameof(DbIntercept<DbProviderFactory, DbConnection, DbTransaction, DbCommand, DbParameter, DbParameterCollection>.InitProviderAndGetWrapper);
+                    wrapper = (Func<DbProviderFactory, DbProviderFactory>)interceptType.GetMethod(methodName).Invoke(null, new[] { factory });
                     Interlocked.Exchange(ref providerFactoryWrapper, wrapper);
                 }
                 return wrapper(factory);
@@ -69,7 +66,11 @@ namespace Framework.Data
                 SetWrapper(typeof(TParameterCollection), out wrapParameterCollection);
             }
 
-            public static void InitProviderFactory(DbProviderFactory factory) => providerFactory = wrapProviderFactory(factory);
+            public static Func<DbProviderFactory, WrappedProviderFactory> InitProviderAndGetWrapper(DbProviderFactory factory)
+            { 
+                providerFactory = wrapProviderFactory(factory);
+                return wrapProviderFactory;
+            }
 
             #region ProviderFactoryWrapper
             public abstract class WrappedProviderFactory : DbProviderFactory, IWrappedDb<TProviderFactory>
@@ -128,20 +129,14 @@ namespace Framework.Data
                 protected override DbParameterCollection DbParameterCollection => wrappedParams ?? (wrappedParams = wrapParameterCollection(Instance.Parameters));
                 protected override DbParameter CreateDbParameter() => wrapParameter(Instance.CreateParameter());
 
-                protected override DbDataReader ExecuteDbDataReader(CommandBehavior behavior)
-                {
-                    return Instance.ExecuteReader(behavior);
-                }
+                protected override DbDataReader ExecuteDbDataReader(CommandBehavior behavior) => 
+                    dbCommandIntercept?.CommandExecute(Instance, cmd => cmd.ExecuteReader(behavior)) ?? Instance.ExecuteReader(behavior);
 
-                public override int ExecuteNonQuery()
-                {
-                    return Instance.ExecuteNonQuery();
-                }
+                public override int ExecuteNonQuery() =>
+                    dbCommandIntercept?.CommandExecute(Instance, cmd => cmd.ExecuteNonQuery()) ?? Instance.ExecuteNonQuery();
 
-                public override object ExecuteScalar()
-                {
-                    return Instance.ExecuteScalar();
-                }
+                public override object ExecuteScalar() =>
+                    dbCommandIntercept?.CommandExecute(Instance, cmd => cmd.ExecuteScalar()) ?? Instance.ExecuteScalar();
             }
             #endregion
 

@@ -18,17 +18,6 @@ namespace Framework.Data
     /// </summary>
     public static class DbHelper
     {
-        /// <summary>
-        /// 
-        /// </summary>
-        public static IDbHook DbHook = null;
-
-        internal static T InternalCommandExecuteWrap<T>(IDbCommand command, Func<IDbCommand, T> func)
-        {
-            var hook = DbHook;
-            return hook == null ? func(command) : hook.CommandExecute(command, func);
-        }
-
         //放置連線字串名稱所對應的 Func<DbConnection>
         private static Hashtable cacheConnectionCreator = new Hashtable();
         public static DbConnectionWrapper OpenConnection(string connName)

@@ -48,12 +48,16 @@
     <Compile Include="Data\DataModelHelper.cs" />
     <Compile Include="Data\_DbWrapper\DbWrapperHelper.cs" />
     <Compile Include="Data\_DbWrapper\DbConnectionWrapper.cs" />
-    <Compile Include="Data\_DbWrapper\DbWrapperHelper.DbIntercept.cs" />
-    <Compile Include="Data\_DbWrapper\DbWrapperHelper.IWrappedDb.cs" />
     <Compile Include="Data\ModelColumnInfoCollection.cs" />
     <Compile Include="Data\DbHelper.cs" />
     <Compile Include="Data\DynamicParameters.cs" />
-    <Compile Include="Data\IDbHook.cs" />
+    <Compile Include="Data\_DbWrapper\DbWrapperHelper.DbIntercept.cs">
+      <DependentUpon>DbWrapperHelper.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\_DbWrapper\DbWrapperHelper.IWrappedDb.cs">
+      <DependentUpon>DbWrapperHelper.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\_DbWrapper\IDbCommandIntercept.cs" />
     <Compile Include="Data\IDataModel.cs" />
     <Compile Include="Data\InternalHelper.cs" />
     <Compile Include="Data\ModelColumnInfo.cs" />

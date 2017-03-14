@@ -71,6 +71,7 @@
     <Compile Include="AA.cs" />
     <Compile Include="DataTest.cs" />
     <Compile Include="DbCommandIntercept.cs" />
+    <Compile Include="DbTraceContext.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

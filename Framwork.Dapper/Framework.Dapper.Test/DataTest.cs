@@ -635,11 +635,31 @@ namespace Framework.Test
         public void RepositoryDataModel()
         {
             //var model = new EnumMappingModel { decimalCol = 1, intCol = 2, norEnum = NormalEnum.C, strCol = "A", strEnum = StringEnum.C };
-            using(var conn = OpenConnection())
+            using (var conn = OpenConnection())
             {
-                var data = Repository.Select<EnumMappingModel>(conn, new { strCol = new[] { "1", "2" } }).ToList();
+                //這是因為本機沒table, 必須指定temp table, 所以自訂table name
+                //否則直接這樣寫更簡短 Repository.Select<EnumMappingModel>(conn, new { strCol = new[] { "1", "2" } }).ToList();
+                var tmpTable = $"#Tmp{Guid.NewGuid().ToString("N").Substring(0, 10)}";
+                conn.Execute(
+                    $@"create table {tmpTable} (
+                        {nameof(EnumMappingModel.norEnum)} int,
+                        {nameof(EnumMappingModel.strEnum)} varchar(30),
+                        {nameof(EnumMappingModel.strCol)} varchar(30),
+                        {nameof(EnumMappingModel.intCol)} int,
+                        {nameof(EnumMappingModel.decimalCol)} decimal
+                    )");
+                var repository = new Repository<EnumMappingModel>(conn, table: tmpTable);
+                using (var trace = new DbTraceContext())
+                {
+                    var data = repository.Select(new { strCol = new[] { "1", "2" } }).ToList();
+                    var cmdLog = trace.History[0];
+                    Assert.Equal($"select * from {tmpTable} where strCol in (@strCol1,@strCol2)", cmdLog.CommandText);
+                    cmdLog
+                        .Verify("strCol1", "1")
+                        .Verify("strCol2", "2");
+                }
+                conn.Execute($"drop table {tmpTable}");
             }
-            
         }
     }
 }

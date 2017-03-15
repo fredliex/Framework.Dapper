@@ -634,20 +634,14 @@ namespace Framework.Test
         [Fact(DisplayName = "Repository-DataModel")]
         public void RepositoryDataModel()
         {
+            var tmpTable = $"#Tmp{Guid.NewGuid().ToString("N").Substring(0, 10)}";
             //var model = new EnumMappingModel { decimalCol = 1, intCol = 2, norEnum = NormalEnum.C, strCol = "A", strEnum = StringEnum.C };
             using (var conn = OpenConnection())
             {
-                //這是因為本機沒table, 必須指定temp table, 所以自訂table name
+                //這是因為不想於LocalDB建table, 所以指定table name為temp table
                 //否則直接這樣寫更簡短 Repository.Select<EnumMappingModel>(conn, new { strCol = new[] { "1", "2" } }).ToList();
-                var tmpTable = $"#Tmp{Guid.NewGuid().ToString("N").Substring(0, 10)}";
-                conn.Execute(
-                    $@"create table {tmpTable} (
-                        {nameof(EnumMappingModel.norEnum)} int,
-                        {nameof(EnumMappingModel.strEnum)} varchar(30),
-                        {nameof(EnumMappingModel.strCol)} varchar(30),
-                        {nameof(EnumMappingModel.intCol)} int,
-                        {nameof(EnumMappingModel.decimalCol)} decimal
-                    )");
+                conn.Execute(Helper.GetCreateSql<EnumMappingModel>(tmpTable));
+
                 var repository = new Repository<EnumMappingModel>(conn, table: tmpTable);
                 using (var trace = new DbTraceContext())
                 {

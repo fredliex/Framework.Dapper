@@ -55,11 +55,14 @@ namespace Framework.Test
             });
         }
 
-        public static string GetCreateSql<T>(string tableName) => GetCreateSql(typeof(T), tableName);
-        public static string GetCreateSql(Type modelType, string tableName)
+        public static string CreateTempTable<T>(this IDbConnection conn) => conn.CreateTempTable(typeof(T));
+        public static string CreateTempTable(this IDbConnection conn, Type modelType)
         {
+            var tableName = $"#Tmp_{modelType.Name}_{Guid.NewGuid().ToString("N").Substring(0, 10)}";
             var fields = string.Join(",", GetColumnTypeSql(modelType).Select(n => $"{n.Key} {n.Value}"));
-            return $@"create table {tableName} ({fields})";
+            var sql = $@"create table {tableName} ({fields})";
+            conn.Execute(sql);
+            return tableName;
         }
     }
 }

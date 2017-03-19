@@ -18,8 +18,11 @@ namespace Framework.Data
         /// <summary>Model成員名稱</summary>
         public string MemberName { get; private set; }
 
-        /// <summary>若非集合的話則為本身型別。若為集合的話則為元素型別。</summary>
+        /// <summary>若非集合的話則為本身型別。若為集合的話則為元素型別。可能會是Nullable類型。</summary>
         public Type ElementType { get; private set; }
+
+        /// <summary>若非集合的話則為本身型別。若為集合的話則為元素型別。為非Nullable類型。</summary>
+        public Type ElementUnderlyingType { get; private set; }
 
         /// <summary>是否為多重值，也就是資料庫的in語法</summary>
         /// <remarks>僅作為參數時才有用</remarks>
@@ -49,13 +52,14 @@ namespace Framework.Data
             ColumnName = memberName;
 
             var elemType = InternalHelper.GetElementType(memberType); //抓取集合元素型別, 回傳null表示非多重值
-            IsMultiValue = elemType != null; 
-            ElementType = elemType ?? memberType;
+            IsMultiValue = elemType != null;
+            ElementUnderlyingType = ElementType = elemType ?? memberType;
             var isStructType = ElementType.IsValueType; //型別是否為值類型
             Type nullableType = null;
             if (isStructType)
             {
                 nullableType = Nullable.GetUnderlyingType(ElementType);
+                if (nullableType != null) ElementUnderlyingType = nullableType;
                 EnumInfo = EnumInfo.Get(nullableType ?? ElementType);
             }
             if (columnAttribute != null)
@@ -64,7 +68,10 @@ namespace Framework.Data
                 if (!string.IsNullOrWhiteSpace(columnAttribute.Name)) ColumnName = columnAttribute.Name;
 
                 var behavior = columnAttribute.Behavior;
+                //DateTime 或是 DateTimeOffset 才能給ConcurrencyCheck
                 IsConcurrencyCheck = (behavior & ColumnBehavior.ConcurrencyCheck) != 0;
+                if (IsConcurrencyCheck && ElementUnderlyingType != typeof(DateTime) && ElementUnderlyingType != typeof(DateTimeOffset))
+                    throw new Exception($"{typeof(ColumnBehavior).Name}.{nameof(ColumnBehavior.ConcurrencyCheck)}只能定義於DateTime或DateTimeOffset型別的屬性上");
                 IsKey = (behavior & ColumnBehavior.Key) != 0;
                 IsTrimRight = (behavior & ColumnBehavior.TrimRight) != 0;
                 //如果model屬性類型為可null的，則設定model屬性為null時資料庫對應的特定值

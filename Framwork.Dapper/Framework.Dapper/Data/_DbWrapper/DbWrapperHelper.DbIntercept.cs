@@ -129,14 +129,23 @@ namespace Framework.Data
                 protected override DbParameterCollection DbParameterCollection => wrappedParams ?? (wrappedParams = wrapParameterCollection(Instance.Parameters));
                 protected override DbParameter CreateDbParameter() => wrapParameter(Instance.CreateParameter());
 
-                protected override DbDataReader ExecuteDbDataReader(CommandBehavior behavior) => 
-                    dbCommandIntercept?.CommandExecute(Instance, cmd => cmd.ExecuteReader(behavior)) ?? Instance.ExecuteReader(behavior);
+                protected override DbDataReader ExecuteDbDataReader(CommandBehavior behavior)
+                {
+                    var intercept = dbCommandIntercept;
+                    return intercept == null ? Instance.ExecuteReader(behavior) : intercept.CommandExecute(Instance, cmd => cmd.ExecuteReader(behavior));
+                }
 
-                public override int ExecuteNonQuery() =>
-                    dbCommandIntercept?.CommandExecute(Instance, cmd => cmd.ExecuteNonQuery()) ?? Instance.ExecuteNonQuery();
+                public override int ExecuteNonQuery()
+                {
+                    var intercept = dbCommandIntercept;
+                    return intercept == null ? Instance.ExecuteNonQuery() : intercept.CommandExecute(Instance, cmd => cmd.ExecuteNonQuery());
+                }
 
-                public override object ExecuteScalar() =>
-                    dbCommandIntercept?.CommandExecute(Instance, cmd => cmd.ExecuteScalar()) ?? Instance.ExecuteScalar();
+                public override object ExecuteScalar()
+                {
+                    var intercept = dbCommandIntercept;
+                    return intercept == null ? Instance.ExecuteScalar() : intercept.CommandExecute(Instance, cmd => cmd.ExecuteScalar());
+                }
             }
             #endregion
 

@@ -11,16 +11,23 @@ namespace Framework.Test
 {
     internal static class Helper
     {
-        public static T Verify<T>(this T parameters, string name, object value, DbType? dbType = null, int? size = null) where T : IDataParameterCollection
+        /// <summary>只抓取command資訊，不會真的執行</summary>
+        public static List<DbTraceContext.CommandInfo> GetCommandInfos(string sqlStr, object model)
         {
-            if (!parameters.Contains(name)) throw new Exception($"不存在參數{name}");
-            var param = (IDbDataParameter)parameters[name];
-            Assert.Equal(value, param.Value);
-            if (dbType.HasValue) Assert.Equal(dbType.Value, param.DbType);
-            if (size.HasValue) Assert.Equal(size.Value, param.Size);
-            return parameters;
+            using (var trace = new DbTraceContext(false))
+            {
+                using (var conn = OpenConnection())
+                {
+                    var data = conn.Query(sqlStr, model).FirstOrDefault();
+                }
+                return trace.History;
+            }
         }
 
+        public static DbConnectionWrapper OpenConnection()
+        {
+            return DbHelper.OpenConnection("test.local");
+        }
 
         private static Dictionary<Type, string> fieldTypeMapping = new Dictionary<Type, string>
         {
@@ -63,6 +70,28 @@ namespace Framework.Test
             var sql = $@"create table {tableName} ({fields})";
             conn.Execute(sql);
             return tableName;
+        }
+
+        internal static void AssertSqlDatetimeEqual(DateTime expected, DateTime actual)
+        {
+            //從資料庫抓出來的Datetime.Kind都是Unspecified, 所以用u的字串格式來比較
+            Assert.Equal(expected.ToString("u"), actual.ToString("u"));
+        }
+
+        internal static List<DbTraceContext.ParameterInfo> Verify(this List<DbTraceContext.ParameterInfo> parameters, string name, object value, DbType? dbType = null, int? size = null)
+        {
+            var param = parameters.FirstOrDefault(p => p.Name == name);
+            if (param == null) throw new Exception($"不存在參數{name}");
+            Assert.Equal(value, param.Value);
+            if (dbType.HasValue) Assert.Equal(dbType.Value, param.DbType);
+            if (size.HasValue) Assert.Equal(size.Value, param.Size);
+            return parameters;
+        }
+
+        internal static DbTraceContext.CommandInfo Verify(this DbTraceContext.CommandInfo commandInfo, string commandText)
+        {
+            Assert.Equal(commandInfo.CommandText, commandText);
+            return commandInfo;
         }
     }
 }

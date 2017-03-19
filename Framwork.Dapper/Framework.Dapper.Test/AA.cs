@@ -38,5 +38,16 @@ namespace Framework.Dapper.Test
             expr_14.DbType = DbType.Int32;
             expr_0D.Add(expr_14);
         }
+
+        public static void A(object obj)
+        {
+            var list = obj as List<int>;
+            if (list != null) Console.WriteLine(list.Count);
+        }
+
+        public static void B(object obj)
+        {
+            if (obj is List<int> list) Console.WriteLine(list.Count);
+        }
     }
 }

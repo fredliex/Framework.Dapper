@@ -52,7 +52,7 @@ namespace Framework.Data
                 var dictionary = param as IEnumerable<KeyValuePair<string, object>>;
                 if (dictionary != null)
                 {
-                    Instance.AddDynamicParams(WrapDictionaryParam(dictionary));
+                    Instance.AddDynamicParams(InternalHelper.WrapDictionaryParam(dictionary));
                     return;
                 }
 
@@ -61,39 +61,6 @@ namespace Framework.Data
                 Templates.Add(param);
             }
 
-            //將Dictionary的Value處理Enum轉換
-            private static Dictionary<string, object> WrapDictionaryParam(IEnumerable<KeyValuePair<string, object>> dict)
-            {
-                return dict.ToDictionary(n => n.Key, n =>
-                {
-                    var value = n.Value;
-                    if (value == null) return value;
-
-                    var valueType = value.GetType();
-                    var elemType = InternalHelper.GetElementType(valueType);
-                    var isCollection = elemType != null;
-                    if (elemType == null) elemType = valueType;
-                    var nullableType = Nullable.GetUnderlyingType(elemType);
-                    var isNullableType = nullableType != null;
-                    if (nullableType != null) elemType = nullableType;
-                    if (elemType.IsEnum)
-                    {
-                        var method = ModelWrapper.EnumInfo.Get(elemType).Metadata.GetConverter(isNullableType, isCollection);
-                        return method.Invoke(null, new object[] { value });
-                    }
-                    return value;
-                });
-            }
-
-#if DEBUG  //測試用而已
-            public void AddParameters(IDbCommand command)
-            {
-                var constructorParamTypes = new[] { typeof(string), typeof(CommandType?), typeof(IDbConnection), typeof(Type), typeof(Type), typeof(Type[]) };
-                var constructorParams = new object[] { command.CommandText, command.CommandType, command.Connection, null, this.GetType(), null };
-                var identity = (SqlMapper.Identity)typeof(SqlMapper.Identity).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, constructorParamTypes, null).Invoke(constructorParams);
-                AddParameters(command, identity);
-            }
-#endif
         }
 
         internal readonly DynamicParametersWrapper Wrapper = new DynamicParametersWrapper();

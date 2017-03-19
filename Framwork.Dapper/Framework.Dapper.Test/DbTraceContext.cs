@@ -20,16 +20,6 @@ namespace Framework.Test
                 CommandText = command.CommandText;
                 Parameters = command.Parameters.Cast<IDbDataParameter>().Select(p => new ParameterInfo(p)).ToList();
             }
-
-            public CommandInfo Verify(string name, object value, DbType? dbType = null, int? size = null) 
-            {
-                var param = Parameters.FirstOrDefault(p => p.Name == name);
-                if (param == null) throw new Exception($"不存在參數{name}");
-                Assert.Equal(value, param.Value);
-                if (dbType.HasValue) Assert.Equal(dbType.Value, param.DbType);
-                if (size.HasValue) Assert.Equal(size.Value, param.Size);
-                return this;
-            }
         }
         internal sealed class ParameterInfo
         {
@@ -44,23 +34,33 @@ namespace Framework.Test
                 DbType = parameter.DbType;
                 Size = parameter.Size;
             }
+
+            private static DbType[] stringTypes = new[] { DbType.String, DbType.StringFixedLength, DbType.AnsiString, DbType.AnsiStringFixedLength };
+            public override string ToString() => 
+                string.Format("{0}={1}", Name, Value == DBNull.Value ? "null" : stringTypes.Contains(DbType) ? $"'{((string)Value).Replace("'", "''")}'" : Value);
         }
 
         [ThreadStatic]
         internal static DbTraceContext Current = null;
 
+
         public readonly List<CommandInfo> History = new List<CommandInfo>();
-        public DbTraceContext()
+
+        /// <summary>是否實際執行真正的DbCommand</summary>
+        private bool executeRealCommand;
+        public DbTraceContext(bool executeRealCommand = true)
         {
+            this.executeRealCommand = executeRealCommand;
             Current = this;
         }
         public void Dispose()
         {
             Current = null;
         }
-        public void Add(IDbCommand command)
+        public bool Add(IDbCommand command)
         {
             History.Add(new CommandInfo(command));
+            return executeRealCommand;
         }
     }
 }

@@ -112,7 +112,8 @@ namespace Framework.Data
                     fillMembers(type, false, BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public);
                     fillMembers(type, false, BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.NonPublic);
                 }
-                columns = memberDict.OrderBy(n => n.Key).Select(n => {
+                //依照MetadataToken排序, 相當於出現的順序
+                columns = memberDict.OrderBy(n => n.Value.member.MetadataToken).Select(n => {
                     var isField = n.Value.isField;
                     return new ModelColumnInfo(isField ? null : (PropertyInfo)n.Value.member, isField ? (FieldInfo)n.Value.member : null, n.Value.attr, isStructModel.Value);
                 });

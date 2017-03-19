@@ -109,6 +109,31 @@ namespace Framework.Data
             return !type.IsValueType || Nullable.GetUnderlyingType(type) != null;
         }
 
+        /// <summary>將Dictionary的Value處理Enum轉換</summary>
+        /// <param name="dict"></param>
+        /// <returns></returns>
+        internal static Dictionary<string, object> WrapDictionaryParam(IEnumerable<KeyValuePair<string, object>> dict)
+        {
+            return dict.ToDictionary(n => n.Key, n =>
+            {
+                var value = n.Value;
+                if (value == null) return value;
+
+                var valueType = value.GetType();
+                var elemType = GetElementType(valueType);
+                var isCollection = elemType != null;
+                if (elemType == null) elemType = valueType;
+                var nullableType = Nullable.GetUnderlyingType(elemType);
+                var isNullableType = nullableType != null;
+                if (nullableType != null) elemType = nullableType;
+                if (elemType.IsEnum)
+                {
+                    var method = ModelWrapper.EnumInfo.Get(elemType).Metadata.GetConverter(isNullableType, isCollection);
+                    return method.Invoke(null, new object[] { value });
+                }
+                return value;
+            });
+        }
 
     }
 }

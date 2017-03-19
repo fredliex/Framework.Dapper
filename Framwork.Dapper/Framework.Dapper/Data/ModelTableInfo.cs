@@ -60,14 +60,5 @@ namespace Framework.Data
 
             Columns = new ModelColumnInfoCollection(ModelColumnInfo.Resolve(Type, HasModelInterface, IsStructModel));
         }
-
-
-
-        /*
-        internal RepositoryMatedata GetRepositoryMatedata(object data)
-        {
-            return new RepositoryMatedata(this, data);
-        }
-        */
     }
 }

@@ -30,8 +30,7 @@ namespace Framework.Data
         {
             if (model == null) return null;
 
-            var dict = model as IDictionary<string, object>;
-            if (dict != null) return dict;
+            if (model is IDictionary<string, object> dict) return InternalHelper.WrapDictionaryParam(dict);
 
             return ModelToDictionary(model);
         }

@@ -208,6 +208,7 @@ namespace Framework.Test
         [Fact(DisplayName = "有定義Key")]
         public void TestKeyModel()
         {
+            var regPatternDateoffset = "\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{5}\\+\\d{2}:\\d{2}";
             using (var conn = OpenConnection())
             {
                 var tmpTable = conn.CreateTempTable<KeyModel>();
@@ -228,10 +229,11 @@ namespace Framework.Test
 
                     //insert一筆
                     oriModel.Insert(conn, repOpt);
-                    trace.History.Last().Verify(
-                        $"insert into {tmpTable} " +
-                        $"(norEnum,strEnum,strCol,intCol,decimalCol,datetimeCol,dateoffsetCol,renameCol) values " +
-                        $"(@norEnum,@strEnum,@strCol,@intCol,@decimalCol,@datetimeCol,@dateoffsetCol,@realCol)");
+                    Assert.Matches(
+                        $@"insert into {tmpTable} " +
+                        $@"\(norEnum,strEnum,strCol,intCol,decimalCol,datetimeCol,dateoffsetCol,renameCol\) values " +
+                        $@"\(@norEnum,@strEnum,@strCol,@intCol,@decimalCol,@datetimeCol,'{regPatternDateoffset}',@realCol\)",
+                        trace.History.Last().CommandText);
 
                     #region 測試各種select
 
@@ -244,41 +246,44 @@ namespace Framework.Test
                     Assert.Equal(oriModel.strCol, model.strCol);
                     Assert.Equal(oriModel.strEnum, model.strEnum);
                     AssertSqlDatetimeEqual(oriModel.datetimeCol, model.datetimeCol);
-                    Assert.Equal(oriModel.dateoffsetCol, model.dateoffsetCol);
+                    Assert.True(model.dateoffsetCol > oriModel.dateoffsetCol);
                     Assert.Equal(oriModel.fakeCol.TrimEnd(), model.fakeCol);
 
                     //查詢條件為model
                     model = Repository.Select(conn, oriModel, repOpt).Single();
-                    trace.History.Last().Verify($"select * from {tmpTable} where norEnum=@norEnum and dateoffsetCol=@dateoffsetCol");
-
+                    trace.History.Last().Verify($"select * from {tmpTable} where norEnum=@norEnum");
                     #endregion
 
                     #region 測試update
 
                     //update條件為model
+                    oriModel = model;
                     oriModel.strCol = "update-model";
-                    Assert.Equal(1, oriModel.Update(conn, model, repOpt));
-                    trace.History.Last().Verify(
-                        $"update {tmpTable} set " +
-                        $"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
-                        $"datetimeCol=@datetimeCol,dateoffsetCol=@dateoffsetCol,renameCol=@realCol " +
-                        $"where " +
-                        $"norEnum=@_key_norEnum and strEnum=@_key_strEnum and strCol=@_key_strCol and intCol=@_key_intCol and decimalCol=@_key_decimalCol and " +
-                        $"datetimeCol=@_key_datetimeCol and dateoffsetCol=@_key_dateoffsetCol and renameCol=@_key_realCol");
+                    Assert.Equal(1, oriModel.Update(conn, repOpt));
+                    Assert.Matches(
+                        $@"update {tmpTable} set " +
+                        $@"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
+                        $@"datetimeCol=@datetimeCol,dateoffsetCol='{regPatternDateoffset}',renameCol=@realCol " +
+                        $@"where " +
+                        $@"norEnum=@_key_norEnum and dateoffsetCol=@_key_dateoffsetCol",
+                        trace.History.Last().CommandText);
                     model = Repository.Select<KeyModel>(conn, oriModel, repOpt).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
                     //update條件為匿名物件
+                    oriModel = model;
+                    var updateAnonymous = new { oriModel.strCol, strEnum = new[] { oriModel.strEnum, StringEnum.B } };
                     oriModel.strCol = "update-class";
-                    var updateAnonymous = new { model.strCol, strEnum = new[] { model.strEnum, StringEnum.B } };
                     Assert.Equal(1, oriModel.Update(conn, updateAnonymous, repOpt));
-                    trace.History.Last().Verify(
-                        $"update {tmpTable} set " +
-                        $"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
-                        $"datetimeCol=@datetimeCol,dateoffsetCol=@dateoffsetCol,renameCol=@realCol " +
-                        $"where " +
-                        $"strCol=@_key_strCol and strEnum in (@_key_strEnum1,@_key_strEnum2)")
-                        .Parameters.Verify("_key_strCol", model.strCol)
+                    Assert.Matches(
+                        $@"update {tmpTable} set " +
+                        $@"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
+                        $@"datetimeCol=@datetimeCol,dateoffsetCol='{regPatternDateoffset}',renameCol=@realCol " +
+                        $@"where " +
+                        $@"strCol=@_key_strCol and strEnum in \(@_key_strEnum1,@_key_strEnum2\)",
+                        trace.History.Last().CommandText);
+                    trace.History.Last().Parameters
+                        .Verify("_key_strCol", updateAnonymous.strCol)
                         .Verify("_key_strEnum1", "cc")
                         .Verify("_key_strEnum2", "bb");
                     model = Repository.Select<KeyModel>(conn, oriModel, repOpt).Single();
@@ -292,13 +297,20 @@ namespace Framework.Test
                         [nameof(KeyModel.strEnum)] = new[] { model.strEnum, StringEnum.B }
                     };
                     Assert.Equal(1, oriModel.Update(conn, updateDict, repOpt));
-                    trace.History.Last().Verify(
-                        $"update {tmpTable} set " +
-                        $"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
-                        $"datetimeCol=@datetimeCol,dateoffsetCol=@dateoffsetCol,renameCol=@realCol " +
-                        $"where " +
-                        $"strCol=@_key_strCol and strEnum in (@_key_strEnum1,@_key_strEnum2)")
-                        .Parameters.Verify("_key_strCol", model.strCol)
+                    var aa = $@"update {tmpTable} set " +
+                        $@"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
+                        $@"datetimeCol=@datetimeCol,dateoffsetCol='{regPatternDateoffset}',renameCol=@realCol " +
+                        $@"where " +
+                        $@"strCol=@_key_strCol and strEnum in \(@_key_strEnum1,@_key_strEnum2\)";
+                    Assert.Matches(
+                        $@"update {tmpTable} set " +
+                        $@"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
+                        $@"datetimeCol=@datetimeCol,dateoffsetCol='{regPatternDateoffset}',renameCol=@realCol " +
+                        $@"where " +
+                        $@"strCol=@_key_strCol and strEnum in \(@_key_strEnum1,@_key_strEnum2\)",
+                        trace.History.Last().CommandText);
+                    trace.History.Last().Parameters
+                        .Verify("_key_strCol", updateDict[nameof(KeyModel.strCol)])
                         .Verify("_key_strEnum1", "cc")
                         .Verify("_key_strEnum2", "bb");
                     model = Repository.Select<KeyModel>(conn, oriModel, repOpt).Single();
@@ -331,10 +343,7 @@ namespace Framework.Test
 
                     //delete條件為model, 這條件理應真的會刪除
                     Assert.Equal(1, model.Delete(conn, repOpt));
-                    trace.History.Last().Verify(
-                        $"delete from {tmpTable} where " +
-                        $"norEnum=@norEnum and strEnum=@strEnum and strCol=@strCol and intCol=@intCol and decimalCol=@decimalCol and " +
-                        $"datetimeCol=@datetimeCol and dateoffsetCol=@dateoffsetCol and renameCol=@realCol");
+                    trace.History.Last().Verify($"delete from {tmpTable} where norEnum=@norEnum and dateoffsetCol=@dateoffsetCol");
 
                     #endregion 
                 }

@@ -26,6 +26,9 @@ namespace Framework.Data
         public static int Update<T>(this T model, IDbConnection conn, object filter, RepositoryOption option = null) where T : IDataModel =>
             new Repository<T>(conn, option).Update(filter, model);
 
+        public static int Update<T>(this T model, IDbConnection conn, RepositoryOption option = null) where T : IDataModel =>
+            new Repository<T>(conn, option).Update(model, model);
+
         public static int Delete<T>(this T model, IDbConnection conn, RepositoryOption option = null) where T : IDataModel =>
             new Repository<T>(conn, option).Delete(model);
 
@@ -75,7 +78,7 @@ namespace Framework.Data
         /// <returns></returns>
         private RepositoryMatedata GetSelectMetadata(RepositoryMatedata metadata)
         {
-            metadata.SqlStr = $"select * from {FullTableName}{GetFilterSection(metadata)}";
+            metadata.SqlStr = $"select * from {FullTableName}{GetFilterSection(metadata, false, null)}";
             metadata.Param = metadata.Filter;
             return metadata;
         }
@@ -132,7 +135,7 @@ namespace Framework.Data
         {
             var filterValues = DataModelHelper.ToDictionary(metadata.Filter);
             var newParam = new DynamicParameters(metadata.Model);
-            var sqlFilter = GetFilterSection(metadata, col =>
+            var sqlFilter = GetFilterSection(metadata, true, col =>
             {
                 var paramName = "_key_" + col.MemberName;
                 newParam.Add(paramName, filterValues[col.ColumnName]);
@@ -165,7 +168,7 @@ namespace Framework.Data
         /// <returns></returns>
         private RepositoryMatedata GetDeleteMetadata(RepositoryMatedata metadata)
         {
-            metadata.SqlStr = $"delete from {FullTableName}{GetFilterSection(metadata)}";
+            metadata.SqlStr = $"delete from {FullTableName}{GetFilterSection(metadata, true, null)}";
             metadata.Param = metadata.Filter;
             return metadata;
         }
@@ -180,12 +183,13 @@ namespace Framework.Data
                 throw new Exception("IsConcurrencyCheck無法應用於非DateTime或DateTimeOffset欄位");
         }
 
-        private static string GetFilterSection(RepositoryMatedata metadata, Func<ColumnInfo, string> memberNameGetter = null)
+        private static string GetFilterSection(RepositoryMatedata metadata, bool includeConcurrencyField, Func<ColumnInfo, string> memberNameGetter)
         {
             if (metadata.FilterColumns != null)
             {
                 //如果參數沒有定義Iskey或IsConcurrencyCheck的話，代表所有欄位都是條件
-                var filterColumns = metadata.FilterColumns.Where(n => n.IsKey || n.IsConcurrencyCheck).ToList();
+                var filterBehavior = includeConcurrencyField ? col => col.IsKey || col.IsConcurrencyCheck : new Func<ColumnInfo, bool>(col => col.IsKey);
+                var filterColumns = metadata.FilterColumns.Where(filterBehavior).ToList();
                 if (filterColumns.Count == 0) filterColumns = metadata.FilterColumns.ToList();
                 var filters = filterColumns.Select(n =>
                     string.Format("{0}{1}@{2}", n.ColumnName, n.IsMultiValue ? " in " : "=", memberNameGetter == null ? n.MemberName : memberNameGetter(n))

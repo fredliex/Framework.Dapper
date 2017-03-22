@@ -6,15 +6,16 @@ using System.Threading.Tasks;
 
 namespace Framework.Data
 {
-    public sealed class RepositoryOption
+    /// <summary>Repository參數</summary>
+    public struct RepositoryOption
     {
         /// <summary>強制指定Database名稱</summary>
-        public string Database = null;
+        public string Database;
 
         /// <summary>強制指定Schema名稱</summary>
-        public string Schema = null;
+        public string Schema;
 
         /// <summary>強制指定Table名稱</summary>
-        public string Table = null;
+        public string Table;
     }
 }

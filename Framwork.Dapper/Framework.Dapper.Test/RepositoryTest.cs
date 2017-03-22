@@ -246,7 +246,7 @@ namespace Framework.Test
                     Assert.Equal(oriModel.strCol, model.strCol);
                     Assert.Equal(oriModel.strEnum, model.strEnum);
                     AssertSqlDatetimeEqual(oriModel.datetimeCol, model.datetimeCol);
-                    Assert.True(model.dateoffsetCol > oriModel.dateoffsetCol);
+                    Assert.NotEqual(model.dateoffsetCol, oriModel.dateoffsetCol);
                     Assert.Equal(oriModel.fakeCol.TrimEnd(), model.fakeCol);
 
                     //查詢條件為model
@@ -297,11 +297,6 @@ namespace Framework.Test
                         [nameof(KeyModel.strEnum)] = new[] { model.strEnum, StringEnum.B }
                     };
                     Assert.Equal(1, oriModel.Update(conn, updateDict, repOpt));
-                    var aa = $@"update {tmpTable} set " +
-                        $@"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
-                        $@"datetimeCol=@datetimeCol,dateoffsetCol='{regPatternDateoffset}',renameCol=@realCol " +
-                        $@"where " +
-                        $@"strCol=@_key_strCol and strEnum in \(@_key_strEnum1,@_key_strEnum2\)";
                     Assert.Matches(
                         $@"update {tmpTable} set " +
                         $@"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
@@ -350,5 +345,32 @@ namespace Framework.Test
                 conn.Execute($"drop table {tmpTable}");
             }
         }
+
+
+        [Fact(DisplayName = "model集合")]
+        public void TestModels()
+        {
+            using (var conn = OpenConnection())
+            {
+                var tmpTable = conn.CreateTempTable<KeyModel>();
+                var repOpt = new RepositoryOption { Table = tmpTable };
+                using (var trace = new DbTraceContext())
+                {
+                    var oriModels = new[]
+                    {
+                        new KeyModel { norEnum = NormalEnum.A },
+                        new KeyModel { norEnum = NormalEnum.B },
+                        new KeyModel { norEnum = NormalEnum.C }
+                    };
+                    oriModels.Inserts(conn, repOpt);
+
+                    oriModels
+
+
+
+                }
+            }
+        }
+
     }
 }

@@ -231,8 +231,8 @@ namespace Framework.Data
         {
             return
                 !column.IsConcurrencyCheck ? "@" + column.MemberName :
-                column.ElementUnderlyingType == typeof(DateTime) ? DateTime.Now.ToString(@"\'yyyy-MM-dd HH:mm:ss.fffff\'") :
-                column.ElementUnderlyingType == typeof(DateTimeOffset) ? DateTimeOffset.Now.ToString(@"\'yyyy-MM-dd HH:mm:ss.fffffzzz\'") :
+                column.ElementUnderlyingType == typeof(DateTime) ? "getdate()" :
+                column.ElementUnderlyingType == typeof(DateTimeOffset) ? "sysdatetimeoffset()" :
                 throw new Exception("IsConcurrencyCheck無法應用於非DateTime或DateTimeOffset欄位");
         }
 

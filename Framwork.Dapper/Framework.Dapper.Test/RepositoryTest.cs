@@ -187,14 +187,14 @@ namespace Framework.Test
         public sealed class KeyModel : IDataModel
         {
             [Column(Behavior = ColumnBehavior.Key)]
-            public NormalEnum norEnum;
+            public NormalEnum keyCol;
             public StringEnum strEnum;
             public string strCol;
             public int? intCol;
             public decimal decimalCol;
             public DateTime datetimeCol;
             [Column(Behavior = ColumnBehavior.ConcurrencyCheck)]
-            public DateTimeOffset dateoffsetCol;
+            public DateTimeOffset concurrencyCol;
             [NonColumn]
             public string fakeCol
             {
@@ -208,7 +208,6 @@ namespace Framework.Test
         [Fact(DisplayName = "有定義Key")]
         public void TestKeyModel()
         {
-            var regPatternDateoffset = "\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{5}\\+\\d{2}:\\d{2}";
             using (var conn = OpenConnection())
             {
                 var tmpTable = conn.CreateTempTable<KeyModel>();
@@ -219,21 +218,19 @@ namespace Framework.Test
                     {
                         decimalCol = 1,
                         intCol = 2,
-                        norEnum = NormalEnum.C,
+                        keyCol = NormalEnum.C,
                         strCol = "A",
                         strEnum = StringEnum.C,
                         datetimeCol = DateTime.Now,
-                        dateoffsetCol = DateTimeOffset.Now,
+                        concurrencyCol = DateTimeOffset.Now,
                         fakeCol = "abc "
                     };
 
                     //insert一筆
                     oriModel.Insert(conn, repOpt);
-                    Assert.Matches(
-                        $@"insert into {tmpTable} " +
-                        $@"\(norEnum,strEnum,strCol,intCol,decimalCol,datetimeCol,dateoffsetCol,renameCol\) values " +
-                        $@"\(@norEnum,@strEnum,@strCol,@intCol,@decimalCol,@datetimeCol,'{regPatternDateoffset}',@realCol\)",
-                        trace.History.Last().CommandText);
+                    trace.History.Last().Verify($"insert into {tmpTable} " +
+                        "(keyCol,strEnum,strCol,intCol,decimalCol,datetimeCol,concurrencyCol,renameCol) values " +
+                        "(@keyCol,@strEnum,@strCol,@intCol,@decimalCol,@datetimeCol,sysdatetimeoffset(),@realCol)");
 
                     #region 測試各種select
 
@@ -242,16 +239,16 @@ namespace Framework.Test
                     trace.History.Last().Verify($"select * from {tmpTable}");
                     Assert.Equal(oriModel.decimalCol, model.decimalCol);
                     Assert.Equal(oriModel.intCol, model.intCol);
-                    Assert.Equal(oriModel.norEnum, model.norEnum);
+                    Assert.Equal(oriModel.keyCol, model.keyCol);
                     Assert.Equal(oriModel.strCol, model.strCol);
                     Assert.Equal(oriModel.strEnum, model.strEnum);
                     AssertSqlDatetimeEqual(oriModel.datetimeCol, model.datetimeCol);
-                    Assert.NotEqual(model.dateoffsetCol, oriModel.dateoffsetCol);
+                    Assert.NotEqual(model.concurrencyCol, oriModel.concurrencyCol);
                     Assert.Equal(oriModel.fakeCol.TrimEnd(), model.fakeCol);
 
                     //查詢條件為model
                     model = Repository.Select(conn, oriModel, repOpt).Single();
-                    trace.History.Last().Verify($"select * from {tmpTable} where norEnum=@norEnum");
+                    trace.History.Last().Verify($"select * from {tmpTable} where keyCol=@keyCol");
                     #endregion
 
                     #region 測試update
@@ -260,13 +257,11 @@ namespace Framework.Test
                     oriModel = model;
                     oriModel.strCol = "update-model";
                     Assert.Equal(1, oriModel.Update(conn, repOpt));
-                    Assert.Matches(
-                        $@"update {tmpTable} set " +
-                        $@"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
-                        $@"datetimeCol=@datetimeCol,dateoffsetCol='{regPatternDateoffset}',renameCol=@realCol " +
-                        $@"where " +
-                        $@"norEnum=@_key_norEnum and dateoffsetCol=@_key_dateoffsetCol",
-                        trace.History.Last().CommandText);
+                    trace.History.Last().Verify(
+                        $"update {tmpTable} set " +
+                        "keyCol=@keyCol,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
+                        "datetimeCol=@datetimeCol,concurrencyCol=sysdatetimeoffset(),renameCol=@realCol " +
+                        "where keyCol=@_key_keyCol and concurrencyCol=@_key_concurrencyCol");
                     model = Repository.Select<KeyModel>(conn, oriModel, repOpt).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
@@ -275,13 +270,11 @@ namespace Framework.Test
                     var updateAnonymous = new { oriModel.strCol, strEnum = new[] { oriModel.strEnum, StringEnum.B } };
                     oriModel.strCol = "update-class";
                     Assert.Equal(1, oriModel.Update(conn, updateAnonymous, repOpt));
-                    Assert.Matches(
-                        $@"update {tmpTable} set " +
-                        $@"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
-                        $@"datetimeCol=@datetimeCol,dateoffsetCol='{regPatternDateoffset}',renameCol=@realCol " +
-                        $@"where " +
-                        $@"strCol=@_key_strCol and strEnum in \(@_key_strEnum1,@_key_strEnum2\)",
-                        trace.History.Last().CommandText);
+                    trace.History.Last().Verify(
+                        $"update {tmpTable} set " +
+                        "keyCol=@keyCol,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
+                        "datetimeCol=@datetimeCol,concurrencyCol=sysdatetimeoffset(),renameCol=@realCol " +
+                        "where strCol=@_key_strCol and strEnum in (@_key_strEnum1,@_key_strEnum2)");
                     trace.History.Last().Parameters
                         .Verify("_key_strCol", updateAnonymous.strCol)
                         .Verify("_key_strEnum1", "cc")
@@ -297,13 +290,11 @@ namespace Framework.Test
                         [nameof(KeyModel.strEnum)] = new[] { model.strEnum, StringEnum.B }
                     };
                     Assert.Equal(1, oriModel.Update(conn, updateDict, repOpt));
-                    Assert.Matches(
-                        $@"update {tmpTable} set " +
-                        $@"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
-                        $@"datetimeCol=@datetimeCol,dateoffsetCol='{regPatternDateoffset}',renameCol=@realCol " +
-                        $@"where " +
-                        $@"strCol=@_key_strCol and strEnum in \(@_key_strEnum1,@_key_strEnum2\)",
-                        trace.History.Last().CommandText);
+                    trace.History.Last().Verify(
+                        $"update {tmpTable} set " +
+                        "keyCol=@keyCol,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
+                        "datetimeCol=@datetimeCol,concurrencyCol=sysdatetimeoffset(),renameCol=@realCol " +
+                        "where strCol=@_key_strCol and strEnum in (@_key_strEnum1,@_key_strEnum2)");
                     trace.History.Last().Parameters
                         .Verify("_key_strCol", updateDict[nameof(KeyModel.strCol)])
                         .Verify("_key_strEnum1", "cc")
@@ -338,7 +329,7 @@ namespace Framework.Test
 
                     //delete條件為model, 這條件理應真的會刪除
                     Assert.Equal(1, model.Delete(conn, repOpt));
-                    trace.History.Last().Verify($"delete from {tmpTable} where norEnum=@norEnum and dateoffsetCol=@dateoffsetCol");
+                    trace.History.Last().Verify($"delete from {tmpTable} where keyCol=@keyCol and concurrencyCol=@concurrencyCol");
 
                     #endregion 
                 }
@@ -358,13 +349,13 @@ namespace Framework.Test
                 {
                     var oriModels = new[]
                     {
-                        new KeyModel { norEnum = NormalEnum.A },
-                        new KeyModel { norEnum = NormalEnum.B },
-                        new KeyModel { norEnum = NormalEnum.C }
+                        new KeyModel { keyCol = NormalEnum.A },
+                        new KeyModel { keyCol = NormalEnum.B },
+                        new KeyModel { keyCol = NormalEnum.C }
                     };
                     oriModels.Inserts(conn, repOpt);
 
-                    oriModels
+                    //oriModels
 
 
 

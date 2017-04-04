@@ -372,9 +372,9 @@ namespace Framework.Test
         #region NullMapping
         public sealed class NullMappingModel : IDataModel
         {
-            [Column(NullMapping = "A")]
-            public NormalEnum? norEnum;
             [Column(NullMapping = 10)]
+            public NormalEnum? norEnum;
+            [Column(NullMapping = "A")]
             public StringEnum? strEnum;
             [Column(NullMapping = 2D)] //docuble
             public string strCol;
@@ -392,8 +392,8 @@ namespace Framework.Test
             var commandInfo = GetCommandInfos(sqlStr, model).First();
             Assert.Equal(5, commandInfo.Parameters.Count);
             commandInfo.Parameters
-                .Verify("norEnum", "A", DbType.String, 4000)
-                .Verify("strEnum", 10, DbType.Int32)
+                .Verify("norEnum", 10, DbType.Int32)
+                .Verify("strEnum", "A", DbType.String, 4000)
                 .Verify("strCol", 2D, DbType.Double)
                 .Verify("intCol", 3L, DbType.Int64)
                 .Verify("decimalCol", 1, DbType.Int32);
@@ -409,7 +409,7 @@ namespace Framework.Test
             Assert.Equal(10, model.intCol);
             Assert.Equal(5, model.decimalCol);
 
-            model = QueryData<NullMappingModel>("select 'A' norEnum, 10 strEnum, 2 strCol, 3 intCol, 1 decimalCol");
+            model = QueryData<NullMappingModel>("select 10 norEnum, 'A' strEnum, 2 strCol, 3 intCol, 1 decimalCol");
             Assert.Equal(null, model.norEnum);
             Assert.Equal(null, model.strEnum);
             Assert.Equal(null, model.strCol);
@@ -426,8 +426,8 @@ namespace Framework.Test
         #endregion
 
         #region 集合
-        [Fact(DisplayName = "集合")]
-        public void EnumerableParam()
+        [Fact(DisplayName = "參數為複數值")]
+        public void EnumerableParamValue()
         {
             var sqlStr = @"select * from tabA col in @col";
             var commandInfo = GetCommandInfos(sqlStr, new { col = new[] { "A", null, "C" } }).First();
@@ -446,6 +446,36 @@ namespace Framework.Test
                 .Verify("col1", "aa", DbType.String, 4000)
                 .Verify("col2", DBNull.Value, DbType.String, 4000)   //總感覺這邊應該要是0才對,而不是4000
                 .Verify("col3", "cc", DbType.String, 4000);
+        }
+
+        [Fact(DisplayName = "多個參數")]
+        public void EnumerableModel()
+        {
+            using (var conn = OpenConnection())
+            {
+                using (var trace = new DbTraceContext())
+                {
+                    var tmpTable = conn.CreateTempTable<NullMappingModel>();
+
+                    var insertModels = new[]
+                    {
+                        new NullMappingModel { norEnum = NormalEnum.A, strEnum = StringEnum.A },
+                        new NullMappingModel { norEnum = NormalEnum.B, strEnum = StringEnum.B },
+                        new NullMappingModel { norEnum = null, strEnum = null }
+                    };
+                    Assert.Equal(insertModels.Length, conn.Execute($"insert into {tmpTable} (norEnum, strEnum) values (@norEnum, @strEnum)", insertModels));
+
+                    var updateModels = insertModels.Select(n => new NullMappingModel { norEnum = n.norEnum, strEnum = StringEnum.C }).ToList();
+                    Assert.Equal(updateModels.Count, conn.Execute($"update {tmpTable} set strEnum = @strEnum where norEnum = @norEnum", updateModels));
+
+                    var selectModels = conn.Query<NullMappingModel>($"select * from {tmpTable}").ToList();
+                    Assert.True(updateModels.OrderBy(n => n.norEnum).Select(n => n.strCol).SequenceEqual(selectModels.OrderBy(n => n.norEnum).Select(n => n.strCol)));
+
+                    Assert.Equal(updateModels.Count, conn.Execute($"delete from {tmpTable} where norEnum = @norEnum", updateModels));
+
+                    conn.Execute($"drop table {tmpTable}");
+                }
+            }
         }
         #endregion
 

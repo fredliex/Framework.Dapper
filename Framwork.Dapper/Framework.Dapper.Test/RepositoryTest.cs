@@ -104,8 +104,8 @@ namespace Framework.Test
                         $"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
                         $"datetimeCol=@datetimeCol,dateoffsetCol=@dateoffsetCol,renameCol=@realCol " +
                         $"where " +
-                        $"norEnum=@_key_norEnum and strEnum=@_key_strEnum and strCol=@_key_strCol and intCol=@_key_intCol and decimalCol=@_key_decimalCol and " +
-                        $"datetimeCol=@_key_datetimeCol and dateoffsetCol=@_key_dateoffsetCol and renameCol=@_key_realCol");
+                        $"norEnum=@_old_norEnum and strEnum=@_old_strEnum and strCol=@_old_strCol and intCol=@_old_intCol and decimalCol=@_old_decimalCol and " +
+                        $"datetimeCol=@_old_datetimeCol and dateoffsetCol=@_old_dateoffsetCol and renameCol=@_old_realCol");
                     model = Repository.Select<NoneKeyModel>(conn, oriModel, repOpt).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
@@ -118,10 +118,10 @@ namespace Framework.Test
                         $"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
                         $"datetimeCol=@datetimeCol,dateoffsetCol=@dateoffsetCol,renameCol=@realCol " +
                         $"where " +
-                        $"strCol=@_key_strCol and strEnum in (@_key_strEnum1,@_key_strEnum2)")
-                        .Parameters.Verify("_key_strCol", model.strCol)
-                        .Verify("_key_strEnum1", "cc")
-                        .Verify("_key_strEnum2", "bb");
+                        $"strCol=@_old_strCol and strEnum in (@_old_strEnum1,@_old_strEnum2)")
+                        .Parameters.Verify("_old_strCol", model.strCol)
+                        .Verify("_old_strEnum1", "cc")
+                        .Verify("_old_strEnum2", "bb");
                     model = Repository.Select<NoneKeyModel>(conn, oriModel, repOpt).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
@@ -138,10 +138,10 @@ namespace Framework.Test
                         $"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
                         $"datetimeCol=@datetimeCol,dateoffsetCol=@dateoffsetCol,renameCol=@realCol " +
                         $"where " +
-                        $"strCol=@_key_strCol and strEnum in (@_key_strEnum1,@_key_strEnum2)")
-                        .Parameters.Verify("_key_strCol", model.strCol)
-                        .Verify("_key_strEnum1", "cc")
-                        .Verify("_key_strEnum2", "bb");
+                        $"strCol=@_old_strCol and strEnum in (@_old_strEnum1,@_old_strEnum2)")
+                        .Parameters.Verify("_old_strCol", model.strCol)
+                        .Verify("_old_strEnum1", "cc")
+                        .Verify("_old_strEnum2", "bb");
                     model = Repository.Select<NoneKeyModel>(conn, oriModel, repOpt).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
@@ -259,9 +259,9 @@ namespace Framework.Test
                     Assert.Equal(1, oriModel.Update(conn, repOpt));
                     trace.History.Last().Verify(
                         $"update {tmpTable} set " +
-                        "keyCol=@keyCol,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
+                        "strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
                         "datetimeCol=@datetimeCol,concurrencyCol=sysdatetimeoffset(),renameCol=@realCol " +
-                        "where keyCol=@_key_keyCol and concurrencyCol=@_key_concurrencyCol");
+                        "where keyCol=@keyCol and concurrencyCol=@concurrencyCol");
                     model = Repository.Select<KeyModel>(conn, oriModel, repOpt).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
@@ -274,11 +274,11 @@ namespace Framework.Test
                         $"update {tmpTable} set " +
                         "keyCol=@keyCol,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
                         "datetimeCol=@datetimeCol,concurrencyCol=sysdatetimeoffset(),renameCol=@realCol " +
-                        "where strCol=@_key_strCol and strEnum in (@_key_strEnum1,@_key_strEnum2)");
+                        "where strCol=@_old_strCol and strEnum in (@_old_strEnum1,@_old_strEnum2)");
                     trace.History.Last().Parameters
-                        .Verify("_key_strCol", updateAnonymous.strCol)
-                        .Verify("_key_strEnum1", "cc")
-                        .Verify("_key_strEnum2", "bb");
+                        .Verify("_old_strCol", updateAnonymous.strCol)
+                        .Verify("_old_strEnum1", "cc")
+                        .Verify("_old_strEnum2", "bb");
                     model = Repository.Select<KeyModel>(conn, oriModel, repOpt).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
@@ -294,11 +294,11 @@ namespace Framework.Test
                         $"update {tmpTable} set " +
                         "keyCol=@keyCol,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
                         "datetimeCol=@datetimeCol,concurrencyCol=sysdatetimeoffset(),renameCol=@realCol " +
-                        "where strCol=@_key_strCol and strEnum in (@_key_strEnum1,@_key_strEnum2)");
+                        "where strCol=@_old_strCol and strEnum in (@_old_strEnum1,@_old_strEnum2)");
                     trace.History.Last().Parameters
-                        .Verify("_key_strCol", updateDict[nameof(KeyModel.strCol)])
-                        .Verify("_key_strEnum1", "cc")
-                        .Verify("_key_strEnum2", "bb");
+                        .Verify("_old_strCol", updateDict[nameof(KeyModel.strCol)])
+                        .Verify("_old_strEnum1", "cc")
+                        .Verify("_old_strEnum2", "bb");
                     model = Repository.Select<KeyModel>(conn, oriModel, repOpt).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
@@ -349,14 +349,34 @@ namespace Framework.Test
                 {
                     var oriModels = new[]
                     {
-                        new KeyModel { keyCol = NormalEnum.A },
-                        new KeyModel { keyCol = NormalEnum.B },
-                        new KeyModel { keyCol = NormalEnum.C }
+                        new KeyModel { keyCol = NormalEnum.A, datetimeCol = DateTime.Now },
+                        new KeyModel { keyCol = NormalEnum.B, datetimeCol = DateTime.Now },
+                        new KeyModel { keyCol = NormalEnum.C, datetimeCol = DateTime.Now }
                     };
-                    oriModels.Inserts(conn, repOpt);
+                    Assert.Equal(oriModels.Length, oriModels.Inserts(conn, repOpt));
+                    Assert.Equal(oriModels.Length, trace.History.Count);
+                    trace.History.ForEach(n => n.Verify(
+                        $"insert into {tmpTable} (keyCol,strEnum,strCol,intCol,decimalCol,datetimeCol,concurrencyCol,renameCol)" +
+                        $" values (@keyCol,@strEnum,@strCol,@intCol,@decimalCol,@datetimeCol,sysdatetimeoffset(),@realCol)"));
+
+                    var models = Repository.Select<KeyModel>(conn, repOpt).ToList();
+
+                    models.ForEach(n => n.decimalCol = 10);
+                    trace.History.Clear();
+                    Assert.Equal(oriModels.Length, models.Updates(conn, repOpt));
+                    
+
+
+                    models = Repository.Select<KeyModel>(conn, repOpt).ToList();
+
+                    Assert.True(models.All(n => n.decimalCol == 10));
+
+                    //Assert.Equal(oriModels.Length, new[] { new });
 
                     //oriModels
 
+
+                    //忘了處理 IEnumerable 參數的測試
 
 
                 }

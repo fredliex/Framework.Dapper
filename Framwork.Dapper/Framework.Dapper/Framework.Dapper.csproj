@@ -47,6 +47,7 @@
     <Compile Include="Data\ColumnInfo.cs" />
     <Compile Include="Data\DataModelHelper.cs" />
     <Compile Include="Data\IRepository.cs" />
+    <Compile Include="Data\RepositoryOfT.cs" />
     <Compile Include="Data\RepositoryOption.cs" />
     <Compile Include="Data\_DbWrapper\DbWrapperHelper.cs" />
     <Compile Include="Data\_DbWrapper\DbConnectionWrapper.cs" />

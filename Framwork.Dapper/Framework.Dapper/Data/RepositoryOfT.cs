@@ -39,8 +39,19 @@ namespace Framework.Data
         /// <returns></returns>
         public IEnumerable<T> Select(object filter = null, bool buffered = true)
         {
+            var filters = InternalHelper.GetElementValues(filter);
+            if(filters != null) return Selects(filters, buffered);
             var metadata = GetSelectMetadata(new RepositoryMatedata(null, filter));
             return conn.Query<T>(metadata.SqlStr, metadata.Param, buffered: buffered);
+        }
+
+        private IEnumerable<T> Selects(IEnumerable<object> filters, bool buffered = true)
+        {
+            var firstFilter = filters.FirstOrDefault();
+            if (firstFilter == null) throw new ArgumentNullException("filters不可為null");
+            var sqlStr = GetSelectMetadata(new RepositoryMatedata(null, firstFilter)).SqlStr;
+            var datas = filters.SelectMany(f => conn.Query<T>(sqlStr, f, buffered: buffered));
+            return buffered ? datas.ToList() : datas;
         }
 
         /// <summary>依照matedata來產生sql</summary>
@@ -48,7 +59,7 @@ namespace Framework.Data
         /// <returns></returns>
         private RepositoryMatedata GetSelectMetadata(RepositoryMatedata metadata)
         {
-            metadata.SqlStr = $"select * from {FullTableName}{GetFilterSection(metadata, false, null)}";
+            metadata.SqlStr = $"select * from {FullTableName}{GetFilterSection(metadata, true, null)}";
             metadata.Param = metadata.Filter;
             return metadata;
         }

@@ -247,23 +247,23 @@ namespace Framework.Test
                     Assert.Equal(oriModel.fakeCol.TrimEnd(), model.fakeCol);
 
                     //查詢條件為model
-                    model = Repository.Select(conn, oriModel, repOpt).Single();
-                    trace.History.Last().Verify($"select * from {tmpTable} where keyCol=@keyCol");
+                    model = Repository.Select(conn, model, repOpt).Single();
+                    trace.History.Last().Verify($"select * from {tmpTable} where keyCol=@keyCol and concurrencyCol=@concurrencyCol");
                     #endregion
 
                     #region 測試update
 
                     //update條件為model
-                    oriModel = model;
-                    oriModel.strCol = "update-model";
-                    Assert.Equal(1, oriModel.Update(conn, repOpt));
+                    var newStrCol = "update-model";
+                    model.strCol = newStrCol;
+                    Assert.Equal(1, model.Update(conn, repOpt));
                     trace.History.Last().Verify(
                         $"update {tmpTable} set " +
                         "strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
                         "datetimeCol=@datetimeCol,concurrencyCol=sysdatetimeoffset(),renameCol=@realCol " +
                         "where keyCol=@keyCol and concurrencyCol=@concurrencyCol");
-                    model = Repository.Select<KeyModel>(conn, oriModel, repOpt).Single();
-                    Assert.Equal(oriModel.strCol, model.strCol);
+                    model = Repository.Select<KeyModel>(conn, new { model.keyCol }, repOpt).Single();
+                    Assert.Equal(newStrCol, model.strCol);
 
                     //update條件為匿名物件
                     oriModel = model;
@@ -279,7 +279,7 @@ namespace Framework.Test
                         .Verify("_old_strCol", updateAnonymous.strCol)
                         .Verify("_old_strEnum1", "cc")
                         .Verify("_old_strEnum2", "bb");
-                    model = Repository.Select<KeyModel>(conn, oriModel, repOpt).Single();
+                    model = Repository.Select<KeyModel>(conn, new { model.keyCol }, repOpt).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
                     //update條件為字典
@@ -299,7 +299,7 @@ namespace Framework.Test
                         .Verify("_old_strCol", updateDict[nameof(KeyModel.strCol)])
                         .Verify("_old_strEnum1", "cc")
                         .Verify("_old_strEnum2", "bb");
-                    model = Repository.Select<KeyModel>(conn, oriModel, repOpt).Single();
+                    model = Repository.Select<KeyModel>(conn, new { model.keyCol }, repOpt).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
                     #endregion 
@@ -347,6 +347,7 @@ namespace Framework.Test
                 var repOpt = new RepositoryOption { Table = tmpTable };
                 using (var trace = new DbTraceContext())
                 {
+                    //insert 
                     var oriModels = new[]
                     {
                         new KeyModel { keyCol = NormalEnum.A, datetimeCol = DateTime.Now },
@@ -358,28 +359,33 @@ namespace Framework.Test
                     trace.History.ForEach(n => n.Verify(
                         $"insert into {tmpTable} (keyCol,strEnum,strCol,intCol,decimalCol,datetimeCol,concurrencyCol,renameCol)" +
                         $" values (@keyCol,@strEnum,@strCol,@intCol,@decimalCol,@datetimeCol,sysdatetimeoffset(),@realCol)"));
-
                     var models = Repository.Select<KeyModel>(conn, repOpt).ToList();
 
-                    models.ForEach(n => n.decimalCol = 10);
+                    //update
                     trace.History.Clear();
+                    models.ForEach(n => n.decimalCol = 10);
                     Assert.Equal(oriModels.Length, models.Updates(conn, repOpt));
-                    
-
-
+                    trace.History.ForEach(n => n.Verify(
+                        $"update {tmpTable} set strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol,datetimeCol=@datetimeCol,concurrencyCol=sysdatetimeoffset(),renameCol=@realCol" +
+                        $" where keyCol=@keyCol and concurrencyCol=@concurrencyCol"));
                     models = Repository.Select<KeyModel>(conn, repOpt).ToList();
-
                     Assert.True(models.All(n => n.decimalCol == 10));
 
-                    //Assert.Equal(oriModels.Length, new[] { new });
+                    //select 
+                    trace.History.Clear();
+                    Assert.Equal(2, Repository.Select<KeyModel>(conn, models.Take(2), repOpt).Count());
+                    trace.History.ForEach(n => n.Verify($"select * from {tmpTable} where keyCol=@keyCol and concurrencyCol=@concurrencyCol"));
 
-                    //oriModels
-
-
-                    //忘了處理 IEnumerable 參數的測試
-
-
+                    //delete
+                    trace.History.Clear();
+                    Assert.Equal(oriModels.Length, models.Deletes(conn, repOpt));
+                    trace.History.ForEach(n => n.Verify(
+                        $"delete from {tmpTable} where keyCol=@keyCol and concurrencyCol=@concurrencyCol"));
+                    models = Repository.Select<KeyModel>(conn, repOpt).ToList();
+                    Assert.Empty(models);
                 }
+
+                conn.Execute($"drop table {tmpTable}");
             }
         }
 

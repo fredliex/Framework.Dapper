@@ -1,4 +1,4 @@
-﻿#define saveParamAssembly
+﻿//#define saveParamAssembly
 
 using System;
 using System.Collections.Concurrent;

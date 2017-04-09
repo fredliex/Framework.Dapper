@@ -108,7 +108,13 @@ namespace Framework.Data
         #endregion
 
         #region update
-        /// <summary>依照指定條件查詢資料</summary>
+        /// <summary>以自身為條件來更新資料</summary>
+        /// <param name="filter">舊資料條件。為避免意外，所以必須指定條件，不得null。</param>
+        /// <param name="model">新資料</param>
+        /// <returns></returns>
+        public int Update(T model) => Update(model, model);
+
+        /// <summary>依照指定條件更新資料</summary>
         /// <param name="filter">舊資料條件。為避免意外，所以必須指定條件，不得null。</param>
         /// <param name="model">新資料</param>
         /// <returns></returns>

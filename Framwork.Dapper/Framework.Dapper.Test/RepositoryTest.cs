@@ -43,14 +43,14 @@ namespace Framework.Test
             using (var conn = OpenConnection())
             {
                 var tmpTable = conn.CreateTempTable<NoneKeyModel>();
-                var repOpt = new RepositoryOption { Table = tmpTable };
+                var repository = conn.GetRepository<NoneKeyModel>(new RepositoryOption { Table = tmpTable });
                 using (var trace = new DbTraceContext())
                 {
                     var oriModel = new NoneKeyModel { decimalCol = 1, intCol = 2, norEnum = NormalEnum.C, strCol = "A", strEnum = StringEnum.C,
                         datetimeCol = DateTime.Now, dateoffsetCol = DateTimeOffset.Now, fakeCol = "abc " };
 
                     //insert一筆
-                    oriModel.Insert(conn, repOpt);
+                    repository.Insert(oriModel);
                     trace.History.Last().Verify(
                         $"insert into {tmpTable} " +
                         $"(norEnum,strEnum,strCol,intCol,decimalCol,datetimeCol,dateoffsetCol,renameCol) values " +
@@ -59,7 +59,7 @@ namespace Framework.Test
                     #region 測試各種select
 
                     //無查詢條件
-                    var model = Repository.Select<NoneKeyModel>(conn, repOpt).Single();
+                    var model = repository.Select().Single();
                     trace.History.Last().Verify($"select * from {tmpTable}");
                     Assert.Equal(oriModel.decimalCol, model.decimalCol);
                     Assert.Equal(oriModel.intCol, model.intCol);
@@ -71,7 +71,7 @@ namespace Framework.Test
                     Assert.Equal(oriModel.fakeCol.TrimEnd(), model.fakeCol);
 
                     //查詢條件為model
-                    model = Repository.Select<NoneKeyModel>(conn, oriModel, repOpt).Single();
+                    model = repository.Select(oriModel).Single();
                     trace.History.Last().Verify(
                         $"select * from {tmpTable} where " +
                         $"norEnum=@norEnum and strEnum=@strEnum and strCol=@strCol and intCol=@intCol and " +
@@ -79,7 +79,7 @@ namespace Framework.Test
 
                     //查詢條件為匿名物件
                     var selectAnonymous = new { oriModel.norEnum, oriModel.strEnum, strCol = new[] { oriModel.strCol, "aaa" } };
-                    model = Repository.Select<NoneKeyModel>(conn, selectAnonymous, repOpt).Single();
+                    model = repository.Select(selectAnonymous).Single();
                     trace.History.Last().Verify($"select * from {tmpTable} where norEnum=@norEnum and strEnum=@strEnum and strCol in (@strCol1,@strCol2)");
 
                     //查詢條件為字典
@@ -89,7 +89,7 @@ namespace Framework.Test
                         [nameof(NoneKeyModel.strEnum)] = oriModel.strEnum,
                         [nameof(NoneKeyModel.strCol)] = new[] { oriModel.strCol, "aaaa" }
                     };
-                    model = Repository.Select<NoneKeyModel>(conn, selectDict, repOpt).Single();
+                    model = repository.Select(selectDict).Single();
                     trace.History.Last().Verify($"select * from {tmpTable} where norEnum=@norEnum and strEnum=@strEnum and strCol in (@strCol1,@strCol2)");
 
                     #endregion
@@ -98,7 +98,7 @@ namespace Framework.Test
 
                     //update條件為model
                     oriModel.strCol = "update-model";
-                    Assert.Equal(1, oriModel.Update(conn, model, repOpt));
+                    Assert.Equal(1, repository.Update(model, oriModel));
                     trace.History.Last().Verify(
                         $"update {tmpTable} set " +
                         $"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
@@ -106,13 +106,13 @@ namespace Framework.Test
                         $"where " +
                         $"norEnum=@_old_norEnum and strEnum=@_old_strEnum and strCol=@_old_strCol and intCol=@_old_intCol and decimalCol=@_old_decimalCol and " +
                         $"datetimeCol=@_old_datetimeCol and dateoffsetCol=@_old_dateoffsetCol and renameCol=@_old_realCol");
-                    model = Repository.Select<NoneKeyModel>(conn, oriModel, repOpt).Single();
+                    model = repository.Select(oriModel).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
                     //update條件為匿名物件
                     oriModel.strCol = "update-class";
                     var updateAnonymous = new { model.strCol, strEnum = new[] { model.strEnum, StringEnum.B } };
-                    Assert.Equal(1, oriModel.Update(conn, updateAnonymous, repOpt));
+                    Assert.Equal(1, repository.Update(updateAnonymous, oriModel));
                     trace.History.Last().Verify(
                         $"update {tmpTable} set " +
                         $"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
@@ -122,7 +122,7 @@ namespace Framework.Test
                         .Parameters.Verify("_old_strCol", model.strCol)
                         .Verify("_old_strEnum1", "cc")
                         .Verify("_old_strEnum2", "bb");
-                    model = Repository.Select<NoneKeyModel>(conn, oriModel, repOpt).Single();
+                    model = repository.Select(oriModel).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
                     //update條件為字典
@@ -132,7 +132,7 @@ namespace Framework.Test
                         [nameof(NoneKeyModel.strCol)] = model.strCol,
                         [nameof(NoneKeyModel.strEnum)] = new[] { model.strEnum, StringEnum.B }
                     };
-                    Assert.Equal(1, oriModel.Update(conn, updateDict,repOpt));
+                    Assert.Equal(1, repository.Update(updateDict, oriModel));
                     trace.History.Last().Verify(
                         $"update {tmpTable} set " +
                         $"norEnum=@norEnum,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
@@ -142,7 +142,7 @@ namespace Framework.Test
                         .Parameters.Verify("_old_strCol", model.strCol)
                         .Verify("_old_strEnum1", "cc")
                         .Verify("_old_strEnum2", "bb");
-                    model = Repository.Select<NoneKeyModel>(conn, oriModel, repOpt).Single();
+                    model = repository.Select(oriModel).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
                     #endregion 
@@ -155,7 +155,7 @@ namespace Framework.Test
                         [nameof(NoneKeyModel.strCol)] = "not exist",
                         [nameof(NoneKeyModel.strEnum)] = new[] { model.strEnum, StringEnum.B }
                     };
-                    Assert.Equal(0, Repository.Delete<NoneKeyModel>(conn, deleteDict,repOpt));
+                    Assert.Equal(0, repository.Delete(deleteDict));
                     trace.History.Last().Verify($"delete from {tmpTable} where strCol=@strCol and strEnum in (@strEnum1,@strEnum2)")
                         .Parameters.Verify("strCol", "not exist")
                         .Verify("strEnum1", "cc")
@@ -163,7 +163,7 @@ namespace Framework.Test
 
                     //delete條件為匿名物件, 這條件理應刪除0筆
                     var deleteAnonymous = new { strCol = "not exist", strEnum = new[] { model.strEnum, StringEnum.B } };
-                    Assert.Equal(0, Repository.Delete<NoneKeyModel>(conn, deleteAnonymous, repOpt));
+                    Assert.Equal(0, repository.Delete(deleteAnonymous));
                     trace.History.Last().Verify(
                         $"delete from {tmpTable} where strCol=@strCol and strEnum in (@strEnum1,@strEnum2)")
                         .Parameters.Verify("strCol", "not exist")
@@ -171,7 +171,7 @@ namespace Framework.Test
                         .Verify("strEnum2", "bb");
 
                     //delete條件為model, 這條件理應真的會刪除
-                    Assert.Equal(1, model.Delete(conn, repOpt));
+                    Assert.Equal(1, repository.Delete(model));
                     trace.History.Last().Verify(
                         $"delete from {tmpTable} where " +
                         $"norEnum=@norEnum and strEnum=@strEnum and strCol=@strCol and intCol=@intCol and decimalCol=@decimalCol and " +
@@ -211,7 +211,7 @@ namespace Framework.Test
             using (var conn = OpenConnection())
             {
                 var tmpTable = conn.CreateTempTable<KeyModel>();
-                var repOpt = new RepositoryOption { Table = tmpTable };
+                var repository = conn.GetRepository<KeyModel>(new RepositoryOption { Table = tmpTable });
                 using (var trace = new DbTraceContext())
                 {
                     var oriModel = new KeyModel
@@ -227,7 +227,7 @@ namespace Framework.Test
                     };
 
                     //insert一筆
-                    oriModel.Insert(conn, repOpt);
+                    repository.Insert(oriModel);
                     trace.History.Last().Verify($"insert into {tmpTable} " +
                         "(keyCol,strEnum,strCol,intCol,decimalCol,datetimeCol,concurrencyCol,renameCol) values " +
                         "(@keyCol,@strEnum,@strCol,@intCol,@decimalCol,@datetimeCol,sysdatetimeoffset(),@realCol)");
@@ -235,7 +235,7 @@ namespace Framework.Test
                     #region 測試各種select
 
                     //無查詢條件
-                    var model = Repository.Select<KeyModel>(conn, repOpt).Single();
+                    var model = repository.Select().Single();
                     trace.History.Last().Verify($"select * from {tmpTable}");
                     Assert.Equal(oriModel.decimalCol, model.decimalCol);
                     Assert.Equal(oriModel.intCol, model.intCol);
@@ -247,7 +247,7 @@ namespace Framework.Test
                     Assert.Equal(oriModel.fakeCol.TrimEnd(), model.fakeCol);
 
                     //查詢條件為model
-                    model = Repository.Select(conn, model, repOpt).Single();
+                    model = repository.Select(model).Single();
                     trace.History.Last().Verify($"select * from {tmpTable} where keyCol=@keyCol and concurrencyCol=@concurrencyCol");
                     #endregion
 
@@ -256,20 +256,20 @@ namespace Framework.Test
                     //update條件為model
                     var newStrCol = "update-model";
                     model.strCol = newStrCol;
-                    Assert.Equal(1, model.Update(conn, repOpt));
+                    Assert.Equal(1, repository.Update(model, model));
                     trace.History.Last().Verify(
                         $"update {tmpTable} set " +
                         "strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
                         "datetimeCol=@datetimeCol,concurrencyCol=sysdatetimeoffset(),renameCol=@realCol " +
                         "where keyCol=@keyCol and concurrencyCol=@concurrencyCol");
-                    model = Repository.Select<KeyModel>(conn, new { model.keyCol }, repOpt).Single();
+                    model = repository.Select(new { model.keyCol }).Single();
                     Assert.Equal(newStrCol, model.strCol);
 
                     //update條件為匿名物件
                     oriModel = model;
                     var updateAnonymous = new { oriModel.strCol, strEnum = new[] { oriModel.strEnum, StringEnum.B } };
                     oriModel.strCol = "update-class";
-                    Assert.Equal(1, oriModel.Update(conn, updateAnonymous, repOpt));
+                    Assert.Equal(1, repository.Update(updateAnonymous, oriModel));
                     trace.History.Last().Verify(
                         $"update {tmpTable} set " +
                         "keyCol=@keyCol,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
@@ -279,7 +279,7 @@ namespace Framework.Test
                         .Verify("_old_strCol", updateAnonymous.strCol)
                         .Verify("_old_strEnum1", "cc")
                         .Verify("_old_strEnum2", "bb");
-                    model = Repository.Select<KeyModel>(conn, new { model.keyCol }, repOpt).Single();
+                    model = repository.Select(new { model.keyCol }).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
                     //update條件為字典
@@ -289,7 +289,7 @@ namespace Framework.Test
                         [nameof(KeyModel.strCol)] = model.strCol,
                         [nameof(KeyModel.strEnum)] = new[] { model.strEnum, StringEnum.B }
                     };
-                    Assert.Equal(1, oriModel.Update(conn, updateDict, repOpt));
+                    Assert.Equal(1, repository.Update(updateDict, oriModel));
                     trace.History.Last().Verify(
                         $"update {tmpTable} set " +
                         "keyCol=@keyCol,strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol," +
@@ -299,7 +299,7 @@ namespace Framework.Test
                         .Verify("_old_strCol", updateDict[nameof(KeyModel.strCol)])
                         .Verify("_old_strEnum1", "cc")
                         .Verify("_old_strEnum2", "bb");
-                    model = Repository.Select<KeyModel>(conn, new { model.keyCol }, repOpt).Single();
+                    model = repository.Select(new { model.keyCol }).Single();
                     Assert.Equal(oriModel.strCol, model.strCol);
 
                     #endregion 
@@ -312,7 +312,7 @@ namespace Framework.Test
                         [nameof(KeyModel.strCol)] = "not exist",
                         [nameof(KeyModel.strEnum)] = new[] { model.strEnum, StringEnum.B }
                     };
-                    Assert.Equal(0, Repository.Delete<KeyModel>(conn, deleteDict, repOpt));
+                    Assert.Equal(0, repository.Delete(deleteDict));
                     trace.History.Last().Verify($"delete from {tmpTable} where strCol=@strCol and strEnum in (@strEnum1,@strEnum2)")
                         .Parameters.Verify("strCol", "not exist")
                         .Verify("strEnum1", "cc")
@@ -320,7 +320,7 @@ namespace Framework.Test
 
                     //delete條件為匿名物件, 這條件理應刪除0筆
                     var deleteAnonymous = new { strCol = "not exist", strEnum = new[] { model.strEnum, StringEnum.B } };
-                    Assert.Equal(0, Repository.Delete<KeyModel>(conn, deleteAnonymous, repOpt));
+                    Assert.Equal(0, repository.Delete(deleteAnonymous));
                     trace.History.Last().Verify(
                         $"delete from {tmpTable} where strCol=@strCol and strEnum in (@strEnum1,@strEnum2)")
                         .Parameters.Verify("strCol", "not exist")
@@ -328,7 +328,7 @@ namespace Framework.Test
                         .Verify("strEnum2", "bb");
 
                     //delete條件為model, 這條件理應真的會刪除
-                    Assert.Equal(1, model.Delete(conn, repOpt));
+                    Assert.Equal(1, repository.Delete(model));
                     trace.History.Last().Verify($"delete from {tmpTable} where keyCol=@keyCol and concurrencyCol=@concurrencyCol");
 
                     #endregion 
@@ -344,7 +344,7 @@ namespace Framework.Test
             using (var conn = OpenConnection())
             {
                 var tmpTable = conn.CreateTempTable<KeyModel>();
-                var repOpt = new RepositoryOption { Table = tmpTable };
+                var repository = conn.GetRepository<KeyModel>(new RepositoryOption { Table = tmpTable });
                 using (var trace = new DbTraceContext())
                 {
                     //insert 
@@ -354,34 +354,34 @@ namespace Framework.Test
                         new KeyModel { keyCol = NormalEnum.B, datetimeCol = DateTime.Now },
                         new KeyModel { keyCol = NormalEnum.C, datetimeCol = DateTime.Now }
                     };
-                    Assert.Equal(oriModels.Length, oriModels.Inserts(conn, repOpt));
+                    Assert.Equal(oriModels.Length, repository.Inserts(oriModels));
                     Assert.Equal(oriModels.Length, trace.History.Count);
                     trace.History.ForEach(n => n.Verify(
                         $"insert into {tmpTable} (keyCol,strEnum,strCol,intCol,decimalCol,datetimeCol,concurrencyCol,renameCol)" +
                         $" values (@keyCol,@strEnum,@strCol,@intCol,@decimalCol,@datetimeCol,sysdatetimeoffset(),@realCol)"));
-                    var models = Repository.Select<KeyModel>(conn, repOpt).ToList();
+                    var models = repository.Select().ToList();
 
                     //update
                     trace.History.Clear();
                     models.ForEach(n => n.decimalCol = 10);
-                    Assert.Equal(oriModels.Length, models.Updates(conn, repOpt));
+                    Assert.Equal(oriModels.Length, repository.Updates(models));
                     trace.History.ForEach(n => n.Verify(
                         $"update {tmpTable} set strEnum=@strEnum,strCol=@strCol,intCol=@intCol,decimalCol=@decimalCol,datetimeCol=@datetimeCol,concurrencyCol=sysdatetimeoffset(),renameCol=@realCol" +
                         $" where keyCol=@keyCol and concurrencyCol=@concurrencyCol"));
-                    models = Repository.Select<KeyModel>(conn, repOpt).ToList();
+                    models = repository.Select().ToList();
                     Assert.True(models.All(n => n.decimalCol == 10));
 
                     //select 
                     trace.History.Clear();
-                    Assert.Equal(2, Repository.Select<KeyModel>(conn, models.Take(2), repOpt).Count());
+                    Assert.Equal(2, repository.Select(models.Take(2)).Count());
                     trace.History.ForEach(n => n.Verify($"select * from {tmpTable} where keyCol=@keyCol and concurrencyCol=@concurrencyCol"));
 
                     //delete
                     trace.History.Clear();
-                    Assert.Equal(oriModels.Length, models.Deletes(conn, repOpt));
+                    Assert.Equal(oriModels.Length, repository.Deletes(models));
                     trace.History.ForEach(n => n.Verify(
                         $"delete from {tmpTable} where keyCol=@keyCol and concurrencyCol=@concurrencyCol"));
-                    models = Repository.Select<KeyModel>(conn, repOpt).ToList();
+                    models = repository.Select().ToList();
                     Assert.Empty(models);
                 }
 

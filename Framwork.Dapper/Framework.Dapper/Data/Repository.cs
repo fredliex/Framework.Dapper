@@ -10,7 +10,7 @@ namespace Framework.Data
 {
     public static class Repository
     {
-        private static Repository<T> GetRepository<T>(IDbConnection conn, RepositoryOption? option) => new Repository<T>(conn, option);
+        public static Repository<T> GetRepository<T>(this IDbConnection conn, RepositoryOption? option = null) => new Repository<T>(conn, option);
 
         #region select
         /// <summary>透過Repository查詢全部資料</summary>
@@ -18,8 +18,8 @@ namespace Framework.Data
         /// <param name="conn"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static IEnumerable<T> Select<T>(IDbConnection conn, RepositoryOption? option = null) where T : IDataModel => 
-            GetRepository<T>(conn, option).Select(null);
+        public static IEnumerable<T> Select<T>(IDbConnection conn) where T : IDataModel => 
+            GetRepository<T>(conn).Select();
 
         /// <summary>透過Repository查詢特定資料</summary>
         /// <typeparam name="T"></typeparam>
@@ -27,17 +27,8 @@ namespace Framework.Data
         /// <param name="filter"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static IEnumerable<T> Select<T>(IDbConnection conn, object filter, RepositoryOption? option = null) where T : IDataModel => 
-            GetRepository<T>(conn, option).Select(filter);
-
-        /// <summary>透過Repository查詢特定資料</summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="conn"></param>
-        /// <param name="filter"></param>
-        /// <param name="option"></param>
-        /// <returns></returns>
-        public static IEnumerable<T> Select<T>(IDbConnection conn, T filter, RepositoryOption? option = null) where T : IDataModel => 
-            GetRepository<T>(conn, option).Select(filter);
+        public static IEnumerable<T> Select<T>(object filter, IDbConnection conn) where T : IDataModel =>
+            GetRepository<T>(conn).Select(filter);
         #endregion
 
         #region insert
@@ -47,8 +38,8 @@ namespace Framework.Data
         /// <param name="conn"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static int Insert<T>(this T model, IDbConnection conn, RepositoryOption? option = null) where T : IDataModel => 
-            GetRepository<T>(conn, option).Insert(model);
+        public static int Insert<T>(this T model, IDbConnection conn) where T : IDataModel => 
+            GetRepository<T>(conn).Insert(model);
 
         /// <summary>透過Repository將多筆model新增</summary>
         /// <typeparam name="T"></typeparam>
@@ -56,8 +47,8 @@ namespace Framework.Data
         /// <param name="conn"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static int Inserts<T>(this IEnumerable<T> models, IDbConnection conn, RepositoryOption? option = null) where T : IDataModel =>
-            GetRepository<T>(conn, option).Inserts(models);
+        public static int Inserts<T>(this IEnumerable<T> models, IDbConnection conn) where T : IDataModel =>
+            GetRepository<T>(conn).Inserts(models);
         #endregion
 
         #region update
@@ -68,8 +59,8 @@ namespace Framework.Data
         /// <param name="filter"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static int Update<T>(this T model, IDbConnection conn, object filter, RepositoryOption? option = null) where T : IDataModel => 
-            GetRepository<T>(conn, option).Update(filter, model);
+        public static int Update<T>(this T model, object filter, IDbConnection conn) where T : IDataModel => 
+            GetRepository<T>(conn).Update(filter, model);
 
         /// <summary>透過Repository將符合model更新回資料庫。通常用於有標示Key且鍵值不變的情況。</summary>
         /// <typeparam name="T"></typeparam>
@@ -77,8 +68,8 @@ namespace Framework.Data
         /// <param name="conn"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static int Update<T>(this T model, IDbConnection conn, RepositoryOption? option = null) where T : IDataModel => 
-            GetRepository<T>(conn, option).Update(model, model);
+        public static int Update<T>(this T model, IDbConnection conn) where T : IDataModel => 
+            GetRepository<T>(conn).Update(model);
 
         /// <summary>透過Repository將多筆model更新回資料庫。</summary>
         /// <typeparam name="T"></typeparam>
@@ -86,8 +77,8 @@ namespace Framework.Data
         /// <param name="conn"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static int Updates<T>(this IEnumerable<T> models, IDbConnection conn, RepositoryOption? option = null) where T : IDataModel =>
-            GetRepository<T>(conn, option).Updates(models);
+        public static int Updates<T>(this IEnumerable<T> models, IDbConnection conn) where T : IDataModel =>
+            GetRepository<T>(conn).Updates(models);
         #endregion
 
         #region delete
@@ -97,8 +88,8 @@ namespace Framework.Data
         /// <param name="filter"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static int Delete<T>(IDbConnection conn, object filter, RepositoryOption? option = null) where T : IDataModel => 
-            GetRepository<T>(conn, option).Delete(filter);
+        public static int Delete<T>(object filter, IDbConnection conn) where T : IDataModel => 
+            GetRepository<T>(conn).Delete(filter);
 
         /// <summary>透過Repository將model自資料庫中刪除。通常用於有標示Key且鍵值不變的情況。</summary>
         /// <typeparam name="T"></typeparam>
@@ -106,8 +97,8 @@ namespace Framework.Data
         /// <param name="conn"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static int Delete<T>(this T model, IDbConnection conn, RepositoryOption? option = null) where T : IDataModel =>
-            GetRepository<T>(conn, option).Delete(model);
+        public static int Delete<T>(this T model, IDbConnection conn) where T : IDataModel =>
+            GetRepository<T>(conn).Delete(model);
 
         /// <summary>透過Repository將model自資料庫中刪除。通常用於有標示Key且鍵值不變的情況。</summary>
         /// <typeparam name="T"></typeparam>
@@ -115,8 +106,8 @@ namespace Framework.Data
         /// <param name="conn"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        public static int Deletes<T>(this IEnumerable<T> models, IDbConnection conn, RepositoryOption? option = null) where T : IDataModel =>
-            GetRepository<T>(conn, option).Deletes(models);
+        public static int Deletes<T>(this IEnumerable<T> models, IDbConnection conn) where T : IDataModel =>
+            GetRepository<T>(conn).Deletes(models);
         #endregion
     }
 

@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 
 namespace Framework.Data
 {
-    public class Repository<T> : IRepository
+    public sealed class Repository<T> : IRepository
     {
         private static ModelTableInfo tableInfo = ModelTableInfo.Get(typeof(T));
 
         private IDbConnection conn;
-        protected RepositoryOption? Option { get; private set; }
+        private RepositoryOption? Option;
         private string FullTableName;
 
         /// <summary>建構式，可指定database、schema、table</summary>

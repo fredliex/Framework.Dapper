@@ -9,6 +9,8 @@ namespace Framework.Data
 {
     public static class DataModelHelper
     {
+        #region model/object to Dictionary
+
         private static ConcurrentDictionary<Type, Action<IDictionary<string, object>, object>> cacheDictionaryFillers =
             new ConcurrentDictionary<Type, Action<IDictionary<string, object>, object>>();
 
@@ -20,19 +22,22 @@ namespace Framework.Data
             return dict;
         }
 
-        public static Dictionary<string, object> ToDictionary(this IDataModel model)
+        public static IDictionary<string, object> ToDictionary(object model) => 
+            model == null ? null :
+            model is IDictionary<string, object> dict ? InternalHelper.WrapDictionaryParam(dict) :
+            ModelToDictionary(model);
+
+        public static Dictionary<string, object> ToDictionary(this IDataModel model) =>
+            model == null ? null : DataModelHelper.ModelToDictionary(model);
+
+        #endregion
+
+
+        #region model compare
+        public static void Compare<T>(this IEnumerable<T> newModels, IEnumerable<T> oldModels) where T : IDataModel
         {
-            if (model == null) return null;
-            return ModelToDictionary(model);
+
         }
-
-        public static IDictionary<string, object> ToDictionary(object model)
-        {
-            if (model == null) return null;
-
-            if (model is IDictionary<string, object> dict) return InternalHelper.WrapDictionaryParam(dict);
-
-            return ModelToDictionary(model);
-        }
+        #endregion
     }
 }

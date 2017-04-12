@@ -34,6 +34,9 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.ValueTuple, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.3.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -48,6 +51,7 @@
     <Compile Include="Data\DataModelHelper.cs" />
     <Compile Include="Data\IRepository.cs" />
     <Compile Include="Data\ModelMerger.cs" />
+    <Compile Include="Data\ModelMerger.Set.cs" />
     <Compile Include="Data\RepositoryOfT.cs" />
     <Compile Include="Data\RepositoryOption.cs" />
     <Compile Include="Data\_DbWrapper\DbWrapperHelper.cs" />

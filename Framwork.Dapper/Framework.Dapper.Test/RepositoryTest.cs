@@ -389,5 +389,45 @@ namespace Framework.Test
             }
         }
 
+        [Fact(DisplayName = "合併")]
+        public void TestMerge()
+        {
+            var set = new HashSet<MergeModel>(new MergeModelEqualityComparer());
+            set.Add(new MergeModel { a = "a", b = 1, c = DateTime.Now });
+            set.Add(new MergeModel { a = "a", b = 1, c = DateTime.Now.AddDays(1) });
+            var a = set.Contains(new MergeModel { a = "a", b = 1 });
+            
+        }
+
+        public sealed class MergeModel
+        {
+            public string a;
+            public int b;
+            public DateTime? c;
+            public List<char> d;
+        }
+
+        public sealed class MergeModelEqualityComparer : IEqualityComparer<MergeModel>
+        {
+            public bool Equals(MergeModel x, MergeModel y)
+            {
+                return EqualityComparer<string>.Default.Equals(x.a, y.a) && EqualityComparer<int>.Default.Equals(x.b, y.b);
+            }
+
+            public int GetHashCode(MergeModel obj)
+            {
+                return CombineHash(
+                    EqualityComparer<string>.Default.GetHashCode(obj.a),
+                    EqualityComparer<int>.Default.GetHashCode(obj.b)
+                );
+            }
+
+            private static int CombineHash(int h1, int h2)
+            {
+                uint num = (uint)(h1 << 5 | (int)((uint)h1 >> 27));
+                return (int)(num + (uint)h1 ^ (uint)h2);
+            }
+        }
+
     }
 }

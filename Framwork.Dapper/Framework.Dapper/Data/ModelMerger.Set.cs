@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,32 +12,22 @@ namespace Framework.Data
         //參考 System.Linq.Set<TElement> 改寫
         //ref: https://github.com/dotnet/corefx/blob/master/src/System.Linq/src/System/Linq/Set.cs
 
-
-        /// <summary>
-        /// A lightweight hash set.
-        /// </summary>
-        /// <typeparam name="TElement">The type of the set's items.</typeparam>
-        private sealed class Set
+        private sealed class Set : IEnumerable<T>
         {
-            /// <summary>
-            /// The comparer used to hash and compare items in the set.
-            /// </summary>
-            private readonly IEqualityComparer<T> _comparer;
-
-            /// <summary>
-            /// The hash buckets, which are used to index into the slots.
-            /// </summary>
-            private int[] _buckets;
-
-            /// <summary>
-            /// The slots, each of which store an item and its hash code.
-            /// </summary>
-            private Slot[] _slots;
-
-            /// <summary>
-            /// The number of items in this set.
-            /// </summary>
-            private int _count;
+            private struct Slot
+            {
+                /// <summary>The hash code of the item.</summary>
+                internal int hashCode;
+                /// <summary>In the case of a hash collision, the index of the next slot to probe.</summary>
+                internal int next;
+                /// <summary>The item held by this slot.</summary>
+                internal T value;
+            }
+            private readonly IEqualityComparer<T> comparer; //The comparer used to hash and compare items in the set.
+            private int[] buckets;  //The hash buckets, which are used to index into the slots.
+            private Slot[] slots;  //The slots, each of which store an item and its hash code.
+            /// <summary>The number of items in this set.</summary>
+            public int Count { get; private set; }
 
             /// <summary>
             /// Constructs a set that compares items with the specified comparer.
@@ -44,11 +35,22 @@ namespace Framework.Data
             /// <param name="comparer">
             /// The comparer. If this is <c>null</c>, it defaults to <see cref="EqualityComparer{TElement}.Default"/>.
             /// </param>
-            public Set(IEqualityComparer<T> comparer)
+            public Set(IEqualityComparer<T> comparer) : this(null, comparer) { }
+
+            public Set(IEnumerable<T> collection, IEqualityComparer<T> comparer)
             {
-                _comparer = comparer ?? EqualityComparer<T>.Default;
-                _buckets = new int[7];
-                _slots = new Slot[7];
+                this.comparer = comparer ?? EqualityComparer<T>.Default;
+                var capacity = (collection as ICollection<T>)?.Count ?? 7; //預設7個
+                buckets = new int[capacity];
+                slots = new Slot[capacity];
+
+                if (collection != null)
+                {
+                    foreach (var n in collection)
+                    {
+                        Add(n);
+                    }
+                }
             }
 
             /// <summary>
@@ -61,119 +63,64 @@ namespace Framework.Data
             public bool Add(T value)
             {
                 int hashCode = InternalGetHashCode(value);
-                for (int i = _buckets[hashCode % _buckets.Length] - 1; i >= 0; i = _slots[i]._next)
+                for (int i = buckets[hashCode % buckets.Length] - 1; i >= 0; i = slots[i].next)
                 {
-                    if (_slots[i]._hashCode == hashCode && _comparer.Equals(_slots[i]._value, value))
-                    {
-                        return false;
-                    }
+                    if (slots[i].hashCode == hashCode && comparer.Equals(slots[i].value, value)) return false;
                 }
 
-                if (_count == _slots.Length)
+                if (Count == slots.Length) 
                 {
                     Resize();
                 }
 
-                int index = _count;
-                _count++;
-                int bucket = hashCode % _buckets.Length;
-                _slots[index]._hashCode = hashCode;
-                _slots[index]._value = value;
-                _slots[index]._next = _buckets[bucket] - 1;
-                _buckets[bucket] = index + 1;
+                int index = Count;
+                Count++;
+                int bucket = hashCode % buckets.Length;
+                slots[index].hashCode = hashCode;
+                slots[index].value = value;
+                slots[index].next = buckets[bucket] - 1;
+                buckets[bucket] = index + 1;
                 return true;
             }
 
             /// <summary>
             /// Attempts to remove an item from this set.
             /// </summary>
-            /// <param name="value">The item to remove.</param>
+            /// <param name="identity">The identity to remove.</param>
+            /// <param name="value">removed item.</param>
             /// <returns>
             /// <c>true</c> if the item was in the set; otherwise, <c>false</c>.
             /// </returns>
-            public bool Remove(T value)
+            public bool Remove(T identity, out T value)
             {
-                int hashCode = InternalGetHashCode(value);
-                int bucket = hashCode % _buckets.Length;
+                int hashCode = InternalGetHashCode(identity);
+                int bucket = hashCode % buckets.Length;
                 int last = -1;
-                for (int i = _buckets[bucket] - 1; i >= 0; last = i, i = _slots[i]._next)
+                for (int i = buckets[bucket] - 1; i >= 0; last = i, i = slots[i].next)
                 {
-                    if (_slots[i]._hashCode == hashCode && _comparer.Equals(_slots[i]._value, value))
+                    if (slots[i].hashCode == hashCode && comparer.Equals(slots[i].value, identity))
                     {
                         if (last < 0)
                         {
-                            _buckets[bucket] = _slots[i]._next + 1;
+                            buckets[bucket] = slots[i].next + 1;
                         }
                         else
                         {
-                            _slots[last]._next = _slots[i]._next;
+                            slots[last].next = slots[i].next;
                         }
 
-                        _slots[i]._hashCode = -1;
-                        _slots[i]._value = default(T);
-                        _slots[i]._next = -1;
+                        slots[i].hashCode = -1;
+                        value = slots[i].value;
+                        slots[i].value = default(T);
+                        slots[i].next = -1;
+                        Count--;
+
                         return true;
                     }
                 }
-
+                value = default(T);
                 return false;
             }
-
-            /// <summary>
-            /// Expands the capacity of this set to double the current capacity, plus one.
-            /// </summary>
-            private void Resize()
-            {
-                int newSize = checked((_count * 2) + 1);
-                int[] newBuckets = new int[newSize];
-                Slot[] newSlots = new Slot[newSize];
-                Array.Copy(_slots, 0, newSlots, 0, _count);
-                for (int i = 0; i < _count; i++)
-                {
-                    int bucket = newSlots[i]._hashCode % newSize;
-                    newSlots[i]._next = newBuckets[bucket] - 1;
-                    newBuckets[bucket] = i + 1;
-                }
-
-                _buckets = newBuckets;
-                _slots = newSlots;
-            }
-
-            /// <summary>
-            /// Creates an array from the items in this set.
-            /// </summary>
-            /// <returns>An array of the items in this set.</returns>
-            public T[] ToArray()
-            {
-                T[] array = new T[_count];
-                for (int i = 0; i != array.Length; ++i)
-                {
-                    array[i] = _slots[i]._value;
-                }
-
-                return array;
-            }
-
-            /// <summary>
-            /// Creates a list from the items in this set.
-            /// </summary>
-            /// <returns>A list of the items in this set.</returns>
-            public List<T> ToList()
-            {
-                int count = _count;
-                List<T> list = new List<T>(count);
-                for (int i = 0; i != count; ++i)
-                {
-                    list.Add(_slots[i]._value);
-                }
-
-                return list;
-            }
-
-            /// <summary>
-            /// The number of items in this set.
-            /// </summary>
-            public int Count => _count;
 
             /// <summary>
             /// Gets the hash code of the provided value with its sign bit zeroed out, so that modulo has a positive result.
@@ -183,29 +130,43 @@ namespace Framework.Data
             private int InternalGetHashCode(T value)
             {
                 // Handle comparer implementations that throw when passed null
-                return (value == null) ? 0 : _comparer.GetHashCode(value) & 0x7FFFFFFF;
+                return (value == null) ? 0 : comparer.GetHashCode(value) & 0x7FFFFFFF;
             }
 
             /// <summary>
-            /// An entry in the hash set.
+            /// Expands the capacity of this set to double the current capacity, plus one.
             /// </summary>
-            internal struct Slot
+            private void Resize()
             {
-                /// <summary>
-                /// The hash code of the item.
-                /// </summary>
-                internal int _hashCode;
+                int newSize = checked((Count * 2) + 1);
+                int[] newBuckets = new int[newSize];
+                Slot[] newSlots = new Slot[newSize];
+                Array.Copy(slots, 0, newSlots, 0, Count);
+                for (int i = 0; i < Count; i++)
+                {
+                    int bucket = newSlots[i].hashCode % newSize;
+                    newSlots[i].next = newBuckets[bucket] - 1;
+                    newBuckets[bucket] = i + 1;
+                }
 
-                /// <summary>
-                /// In the case of a hash collision, the index of the next slot to probe.
-                /// </summary>
-                internal int _next;
-
-                /// <summary>
-                /// The item held by this slot.
-                /// </summary>
-                internal T _value;
+                buckets = newBuckets;
+                slots = newSlots;
             }
+
+            public IEnumerator<T> GetEnumerator()
+            {
+                var count = 0;
+                foreach (var n in slots)
+                {
+                    if (n.hashCode >= 0)
+                    {
+                        yield return n.value;
+                        if (++count >= Count) break;
+                    }
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
     }
 }

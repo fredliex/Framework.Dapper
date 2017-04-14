@@ -7,15 +7,12 @@ using System.Collections.ObjectModel;
 
 namespace Framework.Data
 {
-    internal static class ModelMergerHelper
+    public partial struct ModelMerger<T>
     {
-
-    }
-
-    public partial struct ModelMerger<T> where T : IDataModel
-    {
+        private static Func<T, int> funcKeyGetHashCode;
+        private static Func<T, T, bool> funcKeyEquals;
         private static IEqualityComparer<T> keyComparer;
-        private static IEqualityComparer<T> valueComparer; 
+        private static Func<T, T, bool> funcValueEquals;
 
         static ModelMerger()
         {
@@ -32,47 +29,32 @@ namespace Framework.Data
 
         public ModelMerger(IEnumerable<T> oldModels, IEnumerable<T> newModels)
         {
-
-
             Same = Insert = Update = Delete = null;
-            
 
-
-            /*
-            //先比較key
-            Enumerable
-            var newKeys = new Dictionary<T>(newModels, keyComparer);
-            oldModels.Select(oldKey =>
+            //先比對key判斷insert, delete 與 keySame
+            var insert = new Set(newModels, keyComparer);
+            var delete = new List<T>();
+            var keySame = new List<(T oldItem, T newItem)>();   //key值相同的, 後續還須判斷為Same還是Update
+            foreach (var oldItem in oldModels)
             {
-                var newKey = newKeys
-            new ValueTuple<T, T>(old, newKeys))
+                if (insert.Remove(oldItem, out var newItem))
+                    keySame.Add((oldItem, newItem));
+                else
+                    delete.Add(oldItem);
             }
-            
 
+            //再將keySame區分為Same還是Update
+            var same = new List<T>();
+            var update = new List<T>();
+            foreach (var n in keySame)
+            {
+                (funcValueEquals(n.oldItem, n.newItem) ? same : update).Add(n.newItem);
+            }
 
-
-
-
-            
-            //new Dictionary<string, T>(IEqualityComparer)
-            oldModels.Except(newModels); //與oldModels中排除newModels
-            oldModels.Intersect(newModels); //回傳交集
-            oldModels.Union(newModels); //回傳聯集
-
-            oldModels
-            oldModels.Join()
-
-            oldModels.GroupJoin()
-            */
-
-
-            //Insert = Key不同, oldModel沒有且newModel有
-            //Delete = Key不同, oldModel有且newModel沒有
-            //Update = Key相同, Value不同
-            //Same = Key相同, Value相同
-
-            //new List<T>().AsReadOnly()
+            Same = same.AsReadOnly();
+            Update = update.AsReadOnly();
+            Delete = delete.AsReadOnly();
+            Insert = insert.ToList().AsReadOnly();
         }
-
     }
 }

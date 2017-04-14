@@ -51,7 +51,10 @@
     <Compile Include="Data\DataModelHelper.cs" />
     <Compile Include="Data\IRepository.cs" />
     <Compile Include="Data\ModelMerger.cs" />
-    <Compile Include="Data\ModelMerger.Set.cs" />
+    <Compile Include="Data\ModelMerger.KeyComparer.cs" />
+    <Compile Include="Data\ModelMerger.Set.cs">
+      <DependentUpon>ModelMerger.cs</DependentUpon>
+    </Compile>
     <Compile Include="Data\RepositoryOfT.cs" />
     <Compile Include="Data\RepositoryOption.cs" />
     <Compile Include="Data\_DbWrapper\DbWrapperHelper.cs" />

@@ -392,11 +392,22 @@ namespace Framework.Test
         [Fact(DisplayName = "合併")]
         public void TestMerge()
         {
+            /*
+            var set = new ModelMerger<MergeModel>.Set(new MergeModelEqualityComparer());
+            set.Add(new MergeModel { a = "a", b = 1, c = DateTime.Now });
+            set.Add(new MergeModel { a = "a", b = 2, c = DateTime.Now });
+            set.Add(new MergeModel { a = "a", b = 3, c = DateTime.Now.AddDays(1) });
+
+            var a = set.Remove(new MergeModel { a = "a", b = 2 }, out var old);
+            */
+
+            /*
             var set = new HashSet<MergeModel>(new MergeModelEqualityComparer());
             set.Add(new MergeModel { a = "a", b = 1, c = DateTime.Now });
             set.Add(new MergeModel { a = "a", b = 1, c = DateTime.Now.AddDays(1) });
             var a = set.Contains(new MergeModel { a = "a", b = 1 });
-            
+            */
+
         }
 
         public sealed class MergeModel

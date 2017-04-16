@@ -109,6 +109,11 @@ namespace Framework.Data
         public static int Deletes<T>(this IEnumerable<T> models, IDbConnection conn) where T : IDataModel =>
             GetRepository<T>(conn).Deletes(models);
         #endregion
+
+        #region merge save
+        public static int Save<T>(this ModelMerger<T> merger, IDbConnection conn) where T : IDataModel => 
+            merger.Delete.Deletes(conn) + merger.Update.Updates(conn) + merger.Insert.Inserts(conn);
+        #endregion
     }
 
 }

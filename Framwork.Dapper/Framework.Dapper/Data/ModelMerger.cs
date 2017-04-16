@@ -56,17 +56,12 @@ namespace Framework.Data
         {
             var columns = ModelTableInfo.Get(typeof(T)).Columns;
             var members = columns.Select(col => col.Member);
-            IEnumerable<MemberInfo> keyMembers = null;
-            if (keyExpressions != null)
+            var keyMembers = keyExpressions?.Select(exp =>
             {
-                keyMembers = keyExpressions.Select(exp =>
-                {
-                    var member = GetMemberInfo(exp);
-                    if (!columns.Any(col => col.Member == member)) throw new Exception($"{member} 不是 {typeof(T)} 的成員。");
-                    return member;
-                });
-
-            }
+                var member = GetMemberInfo(exp);
+                if (!columns.Any(col => col.Member == member)) throw new Exception($"{member} 不是 {typeof(T)} 的成員。");
+                return member;
+            });
             if (keyMembers != null && keyMembers.Any()) return new Comparer(members, keyMembers);
 
             if (defaultComparer != null) return defaultComparer;
@@ -81,6 +76,5 @@ namespace Framework.Data
             expression is MemberExpression memberExp ? memberExp.Member :
             expression is UnaryExpression unaryExp ? GetMemberInfo(unaryExp.Operand) :
             null;
-
     }
 }

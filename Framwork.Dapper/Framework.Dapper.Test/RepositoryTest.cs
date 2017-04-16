@@ -401,7 +401,7 @@ namespace Framework.Test
             public List<char> d;
         }
 
-        [Fact(DisplayName = "合併")]
+        [Fact(DisplayName = "合併-預設key")]
         public void TestMerge()
         {
             var oldModels = new[]
@@ -419,6 +419,30 @@ namespace Framework.Test
             };
 
             var merger = oldModels.Merge(newModels);
+            Assert.True(newModels.Where(n => n.b == 4).SequenceEqual(merger.Insert));
+            Assert.True(oldModels.Where(n => n.b == 2).SequenceEqual(merger.Delete));
+            Assert.True(newModels.Where(n => n.b == 3).SequenceEqual(merger.Update));
+            Assert.True(newModels.Where(n => n.b == 1).SequenceEqual(merger.Same));
+        }
+
+        [Fact(DisplayName = "合併-指定key")]
+        public void TestMergeKey()
+        {
+            var oldModels = new[]
+            {
+                new MergeModel { a = "a", b = 1, c = DateTime.Now },
+                new MergeModel { a = "a", b = 2, c = DateTime.Now },
+                new MergeModel { a = "a", b = 3, c = DateTime.Now.AddDays(1) }
+            };
+
+            var newModels = new[]
+            {
+                new MergeModel { a = "a", b = 1, c = DateTime.Now },
+                new MergeModel { a = "a", b = 3, c = DateTime.Now.AddDays(2) },
+                new MergeModel { a = "a", b = 4, c = DateTime.Now }
+            };
+
+            var merger = oldModels.Merge(newModels, m => m.b);
             Assert.True(newModels.Where(n => n.b == 4).SequenceEqual(merger.Insert));
             Assert.True(oldModels.Where(n => n.b == 2).SequenceEqual(merger.Delete));
             Assert.True(newModels.Where(n => n.b == 3).SequenceEqual(merger.Update));

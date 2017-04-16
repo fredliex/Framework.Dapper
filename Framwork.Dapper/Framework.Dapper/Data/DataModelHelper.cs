@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -34,10 +35,8 @@ namespace Framework.Data
 
 
         #region model compare
-        public static void Compare<T>(this IEnumerable<T> newModels, IEnumerable<T> oldModels) where T : IDataModel
-        {
-
-        }
+        public static ModelMerger<T> Merge<T>(this IEnumerable<T> oldModels, IEnumerable<T> newModels, params Expression<Func<T, object>>[] keyExpressions) where T : IDataModel =>
+            new ModelMerger<T>(oldModels, newModels, keyExpressions);
         #endregion
     }
 }

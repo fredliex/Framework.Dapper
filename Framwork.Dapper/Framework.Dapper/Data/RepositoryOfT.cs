@@ -233,10 +233,11 @@ namespace Framework.Data
         {
             if (metadata.FilterColumns != null)
             {
+                //如果有IsKey的話, 是IsKey+IsConcurrencyCheck. 如果沒有IsKey的話就是全部欄位
                 //如果參數沒有定義Iskey或IsConcurrencyCheck的話，代表所有欄位都是條件
                 var filterBehavior = includeConcurrencyField ? col => col.IsKey || col.IsConcurrencyCheck : new Func<ColumnInfo, bool>(col => col.IsKey);
                 var filterColumns = metadata.FilterColumns.Where(filterBehavior).ToList();
-                if (filterColumns.Count == 0) filterColumns = metadata.FilterColumns.ToList();
+                if (!filterColumns.Any(col => col.IsKey)) filterColumns = metadata.FilterColumns.ToList();
                 var filters = filterColumns.Select(n =>
                     string.Format("{0}{1}@{2}", n.ColumnName, n.IsMultiValue ? " in " : "=", parameterNameGetter == null ? n.MemberName : parameterNameGetter(n))
                 ).ToList();

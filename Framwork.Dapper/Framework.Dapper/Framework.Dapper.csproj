@@ -50,8 +50,10 @@
     <Compile Include="Data\ColumnInfo.cs" />
     <Compile Include="Data\DataModelHelper.cs" />
     <Compile Include="Data\IRepository.cs" />
+    <Compile Include="Data\ModelMerger.Comparer.cs">
+      <DependentUpon>ModelMerger.cs</DependentUpon>
+    </Compile>
     <Compile Include="Data\ModelMerger.cs" />
-    <Compile Include="Data\ModelMerger.KeyComparer.cs" />
     <Compile Include="Data\ModelMerger.Set.cs">
       <DependentUpon>ModelMerger.cs</DependentUpon>
     </Compile>

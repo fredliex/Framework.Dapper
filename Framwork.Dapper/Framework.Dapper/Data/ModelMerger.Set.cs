@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 namespace Framework.Data
 {
-    partial struct ModelMerger<T>
+    partial class ModelMerger<T>
     {
         //參考 System.Linq.Set<TElement> 改寫
         //ref: https://github.com/dotnet/corefx/blob/master/src/System.Linq/src/System/Linq/Set.cs
 
-        private sealed class Set : IEnumerable<T>
+        private sealed class Set
         {
             private struct Slot
             {
@@ -153,20 +153,20 @@ namespace Framework.Data
                 slots = newSlots;
             }
 
-            public IEnumerator<T> GetEnumerator()
+            public List<T> ToList()
             {
-                var count = 0;
+                var list = new List<T>(Count);
+                if (Count == 0) return list;
                 foreach (var n in slots)
                 {
                     if (n.hashCode >= 0)
                     {
-                        yield return n.value;
-                        if (++count >= Count) break;
+                        list.Add(n.value);
+                        if (list.Count >= Count) break;
                     }
                 }
+                return list;
             }
-
-            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
     }
 }

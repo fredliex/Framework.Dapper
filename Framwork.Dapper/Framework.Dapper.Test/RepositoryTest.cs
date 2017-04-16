@@ -222,7 +222,7 @@ namespace Framework.Test
                         strCol = "A",
                         strEnum = StringEnum.C,
                         datetimeCol = DateTime.Now,
-                        concurrencyCol = DateTimeOffset.Now,
+                        concurrencyCol = DateTimeOffset.Now.AddDays(-1),
                         fakeCol = "abc "
                     };
 
@@ -389,56 +389,43 @@ namespace Framework.Test
             }
         }
 
-        [Fact(DisplayName = "合併")]
-        public void TestMerge()
+
+        #region Model Merge
+        public sealed class MergeModel : IDataModel
         {
-            /*
-            var set = new ModelMerger<MergeModel>.Set(new MergeModelEqualityComparer());
-            set.Add(new MergeModel { a = "a", b = 1, c = DateTime.Now });
-            set.Add(new MergeModel { a = "a", b = 2, c = DateTime.Now });
-            set.Add(new MergeModel { a = "a", b = 3, c = DateTime.Now.AddDays(1) });
-
-            var a = set.Remove(new MergeModel { a = "a", b = 2 }, out var old);
-            */
-
-            /*
-            var set = new HashSet<MergeModel>(new MergeModelEqualityComparer());
-            set.Add(new MergeModel { a = "a", b = 1, c = DateTime.Now });
-            set.Add(new MergeModel { a = "a", b = 1, c = DateTime.Now.AddDays(1) });
-            var a = set.Contains(new MergeModel { a = "a", b = 1 });
-            */
-
-        }
-
-        public sealed class MergeModel
-        {
+            [Column(Behavior = ColumnBehavior.Key)]
             public string a;
+            [Column(Behavior = ColumnBehavior.Key)]
             public int b;
             public DateTime? c;
             public List<char> d;
         }
 
-        public sealed class MergeModelEqualityComparer : IEqualityComparer<MergeModel>
+        [Fact(DisplayName = "合併")]
+        public void TestMerge()
         {
-            public bool Equals(MergeModel x, MergeModel y)
+            var oldModels = new[]
             {
-                return EqualityComparer<string>.Default.Equals(x.a, y.a) && EqualityComparer<int>.Default.Equals(x.b, y.b);
-            }
+                new MergeModel { a = "a", b = 1, c = DateTime.Now },
+                new MergeModel { a = "a", b = 2, c = DateTime.Now },
+                new MergeModel { a = "a", b = 3, c = DateTime.Now.AddDays(1) }
+            };
 
-            public int GetHashCode(MergeModel obj)
+            var newModels = new[]
             {
-                return CombineHash(
-                    EqualityComparer<string>.Default.GetHashCode(obj.a),
-                    EqualityComparer<int>.Default.GetHashCode(obj.b)
-                );
-            }
+                new MergeModel { a = "a", b = 1, c = DateTime.Now },
+                new MergeModel { a = "a", b = 3, c = DateTime.Now.AddDays(2) },
+                new MergeModel { a = "a", b = 4, c = DateTime.Now }
+            };
 
-            private static int CombineHash(int h1, int h2)
-            {
-                uint num = (uint)(h1 << 5 | (int)((uint)h1 >> 27));
-                return (int)(num + (uint)h1 ^ (uint)h2);
-            }
+            var merger = oldModels.Merge(newModels);
+            Assert.True(newModels.Where(n => n.b == 4).SequenceEqual(merger.Insert));
+            Assert.True(oldModels.Where(n => n.b == 2).SequenceEqual(merger.Delete));
+            Assert.True(newModels.Where(n => n.b == 3).SequenceEqual(merger.Update));
+            Assert.True(newModels.Where(n => n.b == 1).SequenceEqual(merger.Same));
         }
+        #endregion
+
 
     }
 }

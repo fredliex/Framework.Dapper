@@ -4,20 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.ObjectModel;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Framework.Data
 {
-    public partial struct ModelMerger<T>
+    public sealed partial class ModelMerger<T> where T : IDataModel
     {
-        private static Func<T, int> funcKeyGetHashCode;
-        private static Func<T, T, bool> funcKeyEquals;
-        private static IEqualityComparer<T> keyComparer;
-        private static Func<T, T, bool> funcValueEquals;
-
-        static ModelMerger()
-        {
-
-        }
+        private static Comparer defaultComparer = null;
+        private Comparer comparer;
 
         public ReadOnlyCollection<T> Same { get; private set; }
 
@@ -27,12 +22,12 @@ namespace Framework.Data
 
         public ReadOnlyCollection<T> Delete { get; private set; }
 
-        public ModelMerger(IEnumerable<T> oldModels, IEnumerable<T> newModels)
+        public ModelMerger(IEnumerable<T> oldModels, IEnumerable<T> newModels, Expression<Func<T, object>>[] keyExpressions)
         {
-            Same = Insert = Update = Delete = null;
+            comparer = InitComparer(keyExpressions);
 
             //先比對key判斷insert, delete 與 keySame
-            var insert = new Set(newModels, keyComparer);
+            var insert = new Set(newModels, comparer);
             var delete = new List<T>();
             var keySame = new List<(T oldItem, T newItem)>();   //key值相同的, 後續還須判斷為Same還是Update
             foreach (var oldItem in oldModels)
@@ -48,7 +43,7 @@ namespace Framework.Data
             var update = new List<T>();
             foreach (var n in keySame)
             {
-                (funcValueEquals(n.oldItem, n.newItem) ? same : update).Add(n.newItem);
+                (comparer.ValueEquals(n.oldItem, n.newItem) ? same : update).Add(n.newItem);
             }
 
             Same = same.AsReadOnly();
@@ -56,5 +51,36 @@ namespace Framework.Data
             Delete = delete.AsReadOnly();
             Insert = insert.ToList().AsReadOnly();
         }
+
+        private Comparer InitComparer(Expression<Func<T, object>>[] keyExpressions)
+        {
+            var columns = ModelTableInfo.Get(typeof(T)).Columns;
+            var members = columns.Select(col => col.Member);
+            IEnumerable<MemberInfo> keyMembers = null;
+            if (keyExpressions != null)
+            {
+                keyMembers = keyExpressions.Select(exp =>
+                {
+                    var member = GetMemberInfo(exp);
+                    if (!columns.Any(col => col.Member == member)) throw new Exception($"{member} 不是 {typeof(T)} 的成員。");
+                    return member;
+                });
+
+            }
+            if (keyMembers != null && keyMembers.Any()) return new Comparer(members, keyMembers);
+
+            if (defaultComparer != null) return defaultComparer;
+            keyMembers = columns.Where(n => n.IsKey).Select(n => n.Member);
+            return defaultComparer = new Comparer(members, keyMembers);
+        }
+
+        private static MemberInfo GetMemberInfo(Expression<Func<T, object>> expression) =>
+            expression == null ? null : GetMemberInfo(expression.Body);
+
+        private static MemberInfo GetMemberInfo(Expression expression) => 
+            expression is MemberExpression memberExp ? memberExp.Member :
+            expression is UnaryExpression unaryExp ? GetMemberInfo(unaryExp.Operand) :
+            null;
+
     }
 }

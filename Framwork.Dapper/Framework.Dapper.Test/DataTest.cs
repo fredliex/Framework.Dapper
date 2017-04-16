@@ -642,5 +642,48 @@ namespace Framework.Test
             Assert.True(((IEnumerable<object>)dict[nameof(DictionaryModel.nullStrEnumArray)]).SequenceEqual(new object[] { 10, 10, 10 }));
         }
         #endregion
+
+        #region join
+        class User
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+        }
+        class Post
+        {
+            public int Id { get; set; }
+            public User Owner { get; set; }
+            public string Content { get; set; }
+        }
+        [Fact(DisplayName = "Join")]
+        public void TestMultiMap()
+        {
+            var createSql = @"
+                create table #Users (Id int, Name varchar(20))
+                create table #Posts (Id int, OwnerId int, Content varchar(20))
+
+                insert #Users values(99, 'Sam')
+                insert #Users values(2, 'I am')
+
+                insert #Posts values(1, 99, 'Sams Post1')
+                insert #Posts values(2, 99, 'Sams Post2')
+                insert #Posts values(3, null, 'no ones post')";
+            using (var conn = OpenConnection())
+            {
+                conn.Execute(createSql);
+                var sql = @"select * from #Posts p left join #Users u on u.Id = p.OwnerId Order by p.Id";
+                var data = conn.Query<Post, User, Post>(sql, (post, user) => { post.Owner = user; return post; }).ToList();
+                var p = data.First();
+
+                Assert.Equal("Sams Post1", p.Content);
+                Assert.Equal(1, p.Id);
+                Assert.Equal("Sam", p.Owner.Name);
+                Assert.Equal(99, p.Owner.Id);
+                Assert.Null(data[2].Owner);
+
+                conn.Execute("drop table #Users drop table #Posts");
+            }
+        }
+        #endregion
     }
 }

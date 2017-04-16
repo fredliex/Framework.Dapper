@@ -68,7 +68,6 @@
     <Otherwise />
   </Choose>
   <ItemGroup>
-    <Compile Include="AA.cs" />
     <Compile Include="DataTest.cs" />
     <Compile Include="DbCommandIntercept.cs" />
     <Compile Include="DbTraceContext.cs" />

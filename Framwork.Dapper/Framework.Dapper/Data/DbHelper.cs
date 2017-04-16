@@ -76,30 +76,30 @@ namespace Framework.Data
         #endregion
 
         #region return multi type
-        public static IEnumerable<TReturn> Query<TFirst, TSecond, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TReturn> map, object param, IDbTransaction transaction, bool buffered, string splitOn, int? commandTimeout, CommandType? commandType)
-        {
-            return Query<TFirst, TSecond, DontMap, DontMap, DontMap, DontMap, DontMap, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
-        }
-        public static IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TThird, TReturn> map, object param, IDbTransaction transaction, bool buffered, string splitOn, int? commandTimeout, CommandType? commandType)
-        {
-            return Query<TFirst, TSecond, TThird, DontMap, DontMap, DontMap, DontMap, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
-        }
-        public static IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TFourth, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TThird, TFourth, TReturn> map, object param, IDbTransaction transaction, bool buffered, string splitOn, int? commandTimeout, CommandType? commandType)
-        {
-            return Query<TFirst, TSecond, TThird, TFourth, DontMap, DontMap, DontMap, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
-        }
-        public static IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TFourth, TFifth, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TThird, TFourth, TFifth, TReturn> map, object param, IDbTransaction transaction, bool buffered, string splitOn, int? commandTimeout, CommandType? commandType)
-        {
-            return Query<TFirst, TSecond, TThird, TFourth, TFifth, DontMap, DontMap, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
-        }
-        public static IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TReturn> map, object param, IDbTransaction transaction, bool buffered, string splitOn, int? commandTimeout, CommandType? commandType)
-        {
-            return Query<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, DontMap, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
-        }
-        public static IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn> map, object param, IDbTransaction transaction, bool buffered, string splitOn, int? commandTimeout, CommandType? commandType)
-        {
-            return Query<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
-        }
+        public static IEnumerable<TReturn> Query<TFirst, TSecond, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TReturn> map, 
+            object param = null, IDbTransaction transaction = null, bool buffered = true, string splitOn = "Id", int? commandTimeout = null, CommandType? commandType = null) =>
+            Query<TFirst, TSecond, DontMap, DontMap, DontMap, DontMap, DontMap, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
+
+        public static IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TThird, TReturn> map,
+            object param = null, IDbTransaction transaction = null, bool buffered = true, string splitOn = "Id", int? commandTimeout = null, CommandType? commandType = null) =>
+            Query<TFirst, TSecond, TThird, DontMap, DontMap, DontMap, DontMap, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
+
+        public static IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TFourth, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TThird, TFourth, TReturn> map,
+            object param = null, IDbTransaction transaction = null, bool buffered = true, string splitOn = "Id", int? commandTimeout = null, CommandType? commandType = null) =>
+            Query<TFirst, TSecond, TThird, TFourth, DontMap, DontMap, DontMap, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
+
+        public static IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TFourth, TFifth, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TThird, TFourth, TFifth, TReturn> map,
+            object param = null, IDbTransaction transaction = null, bool buffered = true, string splitOn = "Id", int? commandTimeout = null, CommandType? commandType = null) =>
+            Query<TFirst, TSecond, TThird, TFourth, TFifth, DontMap, DontMap, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
+
+        public static IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TReturn> map,
+            object param = null, IDbTransaction transaction = null, bool buffered = true, string splitOn = "Id", int? commandTimeout = null, CommandType? commandType = null) =>
+            Query<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, DontMap, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
+
+        public static IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn>(this IDbConnection conn, string sql, Func<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn> map,
+            object param = null, IDbTransaction transaction = null, bool buffered = true, string splitOn = "Id", int? commandTimeout = null, CommandType? commandType = null) =>
+            Query<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn>(conn, sql, map, param, transaction, buffered, splitOn, commandTimeout, commandType);
+
         private static IEnumerable<TReturn> Query<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn>(this IDbConnection conn, string sql, Delegate map, object param, IDbTransaction transaction, bool buffered, string splitOn, int? commandTimeout, CommandType? commandType)
         {
             var datas = QueryImp<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn>(conn, sql, map, param, transaction, splitOn, commandTimeout, commandType ?? CommandType.Text);
@@ -108,8 +108,7 @@ namespace Framework.Data
 
         private static IEnumerable<TReturn> QueryImp<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn>(this IDbConnection conn, string sql, Delegate map, object param, IDbTransaction transaction, string splitOn, int? commandTimeout, CommandType commandType)
         {
-            ModelWrapper.Cache cache;
-            var paramWrapper = ModelWrapper.WrapParam(conn, param, commandType, sql, out cache);
+            var paramWrapper = ModelWrapper.WrapParam(conn, param, commandType, sql, out var cache);
             var commandDefinition = new CommandDefinition(sql, paramWrapper, transaction, commandTimeout, commandType, CommandFlags.Buffered);
             using (var reader = SqlMapper.ExecuteReader(conn, commandDefinition, CommandBehavior.SequentialAccess | CommandBehavior.SingleResult))
             {
@@ -132,8 +131,7 @@ namespace Framework.Data
         public static int Execute(this IDbConnection conn, string sql, object param = null, IDbTransaction transaction = null, int? commandTimeout = null, CommandType? commandType = null)
         {
             var cmdType = commandType ?? CommandType.Text;
-            ModelWrapper.Cache cache;
-            var paramWrapper = ModelWrapper.WrapParam(conn, param, cmdType, sql, out cache);
+            var paramWrapper = ModelWrapper.WrapParam(conn, param, cmdType, sql, out var cache);
             var commandDefinition = new CommandDefinition(sql, paramWrapper, transaction, commandTimeout, cmdType, CommandFlags.Buffered);
             return SqlMapper.Execute(conn, commandDefinition);
         }

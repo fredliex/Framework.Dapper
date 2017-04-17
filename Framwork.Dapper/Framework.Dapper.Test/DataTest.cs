@@ -671,6 +671,7 @@ namespace Framework.Test
             using (var conn = OpenConnection())
             {
                 conn.Execute(createSql);
+
                 var sql = @"select * from #Posts p left join #Users u on u.Id = p.OwnerId Order by p.Id";
                 var data = conn.Query<Post, User, Post>(sql, (post, user) => { post.Owner = user; return post; }).ToList();
                 var p = data.First();
@@ -682,6 +683,37 @@ namespace Framework.Test
                 Assert.Null(data[2].Owner);
 
                 conn.Execute("drop table #Users drop table #Posts");
+            }
+        }
+        #endregion
+
+        #region member default value
+        class MemberDefaultModel
+        {
+            public int intNoneDefault { get; set; }
+            public int colInt { get; set; } = 10;
+            public int? colIntNull { get; set; } = 20;
+            public string strNoneDefault { get; set; }
+            public string colStr { get; set; } = "a";
+        }
+
+        [Fact(DisplayName = "member有預設值")]
+        public void TestMemberDefaultValue()
+        {
+            using (var conn = OpenConnection())
+            {
+                var sqlStr = "select" +
+                    "   convert(int, null) intNoneDefault," +
+                    "   convert(int, null) colInt," +
+                    "   convert(int, null) colIntNull," +
+                    "   convert(int, null) strNoneDefault," +
+                    "   convert(int, null) colStr";
+                var data = conn.Query<MemberDefaultModel>(sqlStr).First();
+                Assert.Equal(default(int), data.intNoneDefault);
+                Assert.Equal(10, data.colInt);
+                Assert.Null(data.colIntNull);
+                Assert.Null(data.strNoneDefault);
+                Assert.Null(data.colStr);
             }
         }
         #endregion

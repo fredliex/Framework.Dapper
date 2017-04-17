@@ -257,6 +257,8 @@ namespace Framework.Data
                 /* model.Enum -> EnumValue.NullValue -> ColumnAttribute.NullMapping -> database
                  * database -> Trim -> ColumnAttribute.NullMapping(特定值轉成null) -> EnumValue.NullValue(null轉成特定enum) -> model.Enum
                  * 
+                 * 以下的value指的是stack裡面的值, target指的是field/prop
+                 * 
                  * 
                  *                                                                                      01.     if (value == DBNull.Value) goto isDbNullLabel:
                  * if (colType == string && member has ColumnAttribute.IsTrimRight)                     02.     value = value.TrimEnd()
@@ -280,17 +282,26 @@ namespace Framework.Data
                  *                                                                                      17.     將value從stack移除
                  * if (memberType has EnumValue.NullValue) {                                            18.     value = EnumValue.NullValue
                  *    if (memberType is Nullable<>)                                                     19.     value = new Nullable<T>(value)
-                 *    if (非建構式)                                                                     20.     prop = value
-                 * } else {                                                                             21.     將target從stack移除
-                 *    if (是建構式) {                                                                   22.     value = null
+                 * } else {                                                                             
+                 *    if (first 且 returnNullIfFirstMissing) {                                          20.     移除target, 跳allDone
+                 *    } else if (memberType is object) {                                                21.     value = null
+                 *    } else if (memberType is Nullable<>) {                                            22.     value = new Nullable<>()
+                 *    } else {                                                                          23.     不設值 = true
+                 *    }
                  * }
-                 *                                                                                      23. finishLabel:
+                 * if(不設值) {                                                                         24.     將target從stack移除, 不對field或prop設值
+                 * } else if (非建構式建立的話) {                                                       25.     prop = value
+                 * }
+                 *                                                                                      26. finishLabel:
                  */
 
+                var first = true;   //是否為第一個欄位
                 var allDone = il.DefineLabel();
                 int valueCopyLocal = il.DeclareLocal(typeof(object)).LocalIndex;     //valueCopyLocal是區域變數2, 放value值
                 var table = ModelTableInfo.Get(type);
                 var columns = table.Columns;
+                Dictionary<Type, LocalBuilder> localNullableBuilders = null;    //放置nullable<T>的預設值
+
                 foreach (var item in names.Select(n => columns.GetColumn(n)))
                 {
                     if (item != null)
@@ -410,6 +421,7 @@ namespace Framework.Data
                         //17. 移除value
                         il.Emit(OpCodes.Pop);   // stack is now [target][target]
 
+                        var dontSetNull = false;        //如果memberType為不可null的型別, 就不設值
                         if (enumNullValue != null)
                         {
                             //18. 如果有定義EnumValue.NullValue ， value = EnumValue.NullValue
@@ -419,20 +431,57 @@ namespace Framework.Data
                             if (nullUnderlyingType != null) il.Emit(OpCodes.Newobj, memberType.GetConstructor(new[] { nullUnderlyingType })); // stack is now [target][target][typed-value]
 
                             //20. 非建構式的話， prop = value
-                            if (specializedConstructor == null) item.GenerateSetEmit(il);   //stack is now[target]
+                            //if (specializedConstructor == null) item.GenerateSetEmit(il);   //stack is now[target]
                         }
                         else
                         {
-                            //21. 將target從stack移除
-                            il.Emit(OpCodes.Pop);   // stack is now [target]
-                            if (specializedConstructor != null)
+                            if (first && returnNullIfFirstMissing)
                             {
-                                //22. value = null
+                                //20. 移除target, 跳allDone
+                                il.Emit(OpCodes.Pop);   // stack is now [target]
+                                il.Emit(OpCodes.Pop);   // stack is now empty
+                                il.Emit(OpCodes.Ldnull); // stack is now [null]
+                                il.Emit(OpCodes.Stloc_1);// stack is now empty
+                                il.Emit(OpCodes.Br, allDone);
+                            }
+                            else if (!memberType.IsValueType)
+                            {
+                                //21. value = null
                                 il.Emit(OpCodes.Ldnull); // stack is now [target][null]
                             }
+                            else if (Nullable.GetUnderlyingType(memberType) != null)
+                            {
+                                //22. value = new Nullable<>()
+                                if (localNullableBuilders == null) localNullableBuilders = new Dictionary<Type, LocalBuilder>();
+                                if (!localNullableBuilders.TryGetValue(memberType, out var localNullableBuilder))
+                                {
+                                    localNullableBuilders[memberType] = localNullableBuilder = il.DeclareLocal(memberType);
+                                    il.Emit(OpCodes.Ldloca, (short)localNullableBuilder.LocalIndex);
+                                    il.Emit(OpCodes.Initobj, type);
+                                }
+                                il.Emit(OpCodes.Ldloca, (short)localNullableBuilder.LocalIndex);
+                                il.Emit(OpCodes.Ldobj, type);   // stack is now [target][null]
+                            }
+                            else
+                            {
+                                //23. 不設值
+                                dontSetNull = true;
+                            }
                         }
+                        if (dontSetNull)
+                        {
+                            //24. 將target從stack移除, 不對field或prop設值
+                            il.Emit(OpCodes.Pop);   // stack is now [target]
+                        }
+                        else if (specializedConstructor == null)
+                        {
+                            //25. 非建構式的話， prop = value
+                            item.GenerateSetEmit(il);   //stack is now[target]
+                        }
+
                         il.MarkLabel(finishLabel);
                     }
+                    first = false;
                     index += 1;
                 }
 

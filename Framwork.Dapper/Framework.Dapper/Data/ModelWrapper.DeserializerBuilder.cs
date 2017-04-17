@@ -452,15 +452,32 @@ namespace Framework.Data
                             else if (Nullable.GetUnderlyingType(memberType) != null)
                             {
                                 //22. value = new Nullable<>()
-                                if (localNullableBuilders == null) localNullableBuilders = new Dictionary<Type, LocalBuilder>();
-                                if (!localNullableBuilders.TryGetValue(memberType, out var localNullableBuilder))
-                                {
-                                    localNullableBuilders[memberType] = localNullableBuilder = il.DeclareLocal(memberType);
+                                /*
+                                 * field = new nullable<T>() 的IL如下
+                                 *      ldflda valuetype [mscorlib]System.Nullable`1<int32> 欄位名稱
+                                 *      initobj valuetype [mscorlib]System.Nullable`1<int32>
+                                 * property = new nullable<T>() 的IL如下
+                                 *      ldloca.s 0
+                                 *      initobj valuetype [mscorlib]System.Nullable`1<int32>
+                                 *      ldloc.0
+                                 *      callvirt instance void property_set(valuetype [mscorlib]System.Nullable`1<int32>)
+                                 */
+                                //if (item.Member.MemberType == MemberTypes.Field)
+                                //{
+                                //    il.Emit(OpCodes.Initobj, memberType); // stack is now [target][null]
+                                //}
+                                //else
+                                //{
+                                    if (localNullableBuilders == null) localNullableBuilders = new Dictionary<Type, LocalBuilder>();
+                                    if (!localNullableBuilders.TryGetValue(memberType, out var localNullableBuilder))
+                                    {
+                                        localNullableBuilders[memberType] = localNullableBuilder = il.DeclareLocal(memberType);
+                                    }
                                     il.Emit(OpCodes.Ldloca, (short)localNullableBuilder.LocalIndex);
                                     il.Emit(OpCodes.Initobj, type);
-                                }
-                                il.Emit(OpCodes.Ldloca, (short)localNullableBuilder.LocalIndex);
-                                il.Emit(OpCodes.Ldobj, type);   // stack is now [target][null]
+                                    il.Emit(OpCodes.Ldloca, (short)localNullableBuilder.LocalIndex);
+                                    il.Emit(OpCodes.Ldobj, memberType);   // stack is now [target][null]
+                                //}
                             }
                             else
                             {

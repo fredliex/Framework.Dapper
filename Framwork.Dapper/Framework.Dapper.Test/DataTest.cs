@@ -688,11 +688,12 @@ namespace Framework.Test
         #endregion
 
         #region member default value
-        class MemberDefaultModel
+        public class MemberDefaultModel : IDataModel
         {
             public int intNoneDefault { get; set; }
             public int colInt { get; set; } = 10;
-            public int? colIntNull { get; set; } = 20;
+            public int? colIntNull = 20;
+            public int? colIntNull2 { get; set; } = 20;
             public string strNoneDefault { get; set; }
             public string colStr { get; set; } = "a";
         }
@@ -706,8 +707,10 @@ namespace Framework.Test
                     "   convert(int, null) intNoneDefault," +
                     "   convert(int, null) colInt," +
                     "   convert(int, null) colIntNull," +
-                    "   convert(int, null) strNoneDefault," +
-                    "   convert(int, null) colStr";
+                    "   convert(varchar, null) strNoneDefault," +
+                    "   convert(varchar, null) colStr";
+                //sqlStr = "select convert(int, null) colIntNull, convert(int, null) colIntNull2";
+                //sqlStr = "select convert(int, null) colIntNull";
                 var data = conn.Query<MemberDefaultModel>(sqlStr).First();
                 Assert.Equal(default(int), data.intNoneDefault);
                 Assert.Equal(10, data.colInt);

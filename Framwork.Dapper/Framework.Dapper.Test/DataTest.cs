@@ -709,8 +709,6 @@ namespace Framework.Test
                     "   convert(int, null) colIntNull," +
                     "   convert(varchar, null) strNoneDefault," +
                     "   convert(varchar, null) colStr";
-                //sqlStr = "select convert(int, null) colIntNull, convert(int, null) colIntNull2";
-                //sqlStr = "select convert(int, null) colIntNull";
                 var data = conn.Query<MemberDefaultModel>(sqlStr).First();
                 Assert.Equal(default(int), data.intNoneDefault);
                 Assert.Equal(10, data.colInt);

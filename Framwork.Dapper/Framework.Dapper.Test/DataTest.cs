@@ -655,7 +655,7 @@ namespace Framework.Test
             public User Owner { get; set; }
             public string Content { get; set; }
         }
-        [Fact(DisplayName = "Join")]
+        [Fact(DisplayName = "Multi Map")]
         public void TestMultiMap()
         {
             var createSql = @"

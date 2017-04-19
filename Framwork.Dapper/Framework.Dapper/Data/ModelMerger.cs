@@ -29,11 +29,11 @@ namespace Framework.Data
             //先比對key判斷insert, delete 與 keySame
             var insert = new Set(newModels, comparer);
             var delete = new List<T>();
-            var keySame = new List<(T oldItem, T newItem)>();   //key值相同的, 後續還須判斷為Same還是Update
+            var keySame = new List<KeyValuePair<T, T>>();       //放鍵值相同的, 後續還須判斷為Same還是Update. KeyValuePair<oldItem, newItem>
             foreach (var oldItem in oldModels)
             {
                 if (insert.Remove(oldItem, out var newItem))
-                    keySame.Add((oldItem, newItem));
+                    keySame.Add(new KeyValuePair<T, T>(oldItem, newItem));
                 else
                     delete.Add(oldItem);
             }
@@ -43,7 +43,7 @@ namespace Framework.Data
             var update = new List<T>();
             foreach (var n in keySame)
             {
-                (comparer.ValueEquals(n.oldItem, n.newItem) ? same : update).Add(n.newItem);
+                (comparer.ValueEquals(n.Key, n.Value) ? same : update).Add(n.Value);
             }
 
             Same = same.AsReadOnly();

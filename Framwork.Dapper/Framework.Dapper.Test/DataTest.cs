@@ -718,5 +718,30 @@ namespace Framework.Test
             }
         }
         #endregion
+
+        [Fact(DisplayName = "ValueTuple")]
+        public void TestValueTuple()
+        {
+            using (var conn = OpenConnection())
+            {
+                var val1 = conn.Query<(int id, string name)>("select 42, 'Fred'").First();
+                Assert.Equal(42, val1.id);
+                Assert.Equal("Fred", val1.name);
+
+                var val2 = conn.Query<(int id, string name)>("select 42, 'Fred', 123").First();
+                Assert.Equal(42, val2.id);
+                Assert.Equal("Fred", val2.name);
+
+                var val3 = conn.Query<(int id, string name, int extra)>("select 42, 'Fred'").First();
+                Assert.Equal(42, val3.id);
+                Assert.Equal("Fred", val3.name);
+                Assert.Equal(0, val3.extra);
+
+                //使用ValueTuple的時候，會忽略欄位名稱。
+                var val4 = conn.Query<(int id, string name)>("select 42 as [Item2], 'Fred' as [Item1]").First();
+                Assert.Equal(42, val4.id);
+                Assert.Equal("Fred", val4.name);
+            }
+        }
     }
 }

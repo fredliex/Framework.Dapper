@@ -118,6 +118,11 @@ namespace Framework.Data
                     return new ModelColumnInfo(isField ? null : (PropertyInfo)n.Value.member, isField ? (FieldInfo)n.Value.member : null, n.Value.attr, isStructModel.Value);
                 });
             }
+            else if (Reflect.Dapper.IsValueTuple(modelType))
+            {
+                columns = modelType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                    .Select(f => new ModelColumnInfo(null, f, null, isStructModel.Value));
+            }
             else
             {
                 //沒實作IDataModel時, 只抓public屬性, 不需逐繼承鍊處理

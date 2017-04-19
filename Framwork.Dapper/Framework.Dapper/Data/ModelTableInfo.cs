@@ -58,7 +58,7 @@ namespace Framework.Data
             if (string.IsNullOrWhiteSpace(Schema)) Schema = null;
             if (string.IsNullOrWhiteSpace(Table)) Table = modelType.Name;
 
-            Columns = new ModelColumnInfoCollection(ModelColumnInfo.Resolve(Type, HasModelInterface, IsStructModel));
+            Columns = new ModelColumnInfoCollection(ModelColumnInfo.Resolve(modelType, HasModelInterface, IsStructModel));
         }
     }
 }

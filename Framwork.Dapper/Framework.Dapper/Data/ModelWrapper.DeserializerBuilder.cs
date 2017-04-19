@@ -301,8 +301,10 @@ namespace Framework.Data
                 var table = ModelTableInfo.Get(type);
                 var columns = table.Columns;
                 Dictionary<Type, LocalBuilder> localNullableBuilders = null;    //放置nullable<T>的預設值
+                var members = Reflect.Dapper.IsValueTuple(type) ? 
+                    names.Select((n, i) => columns.GetColumn($"Item{i + 1}")) : names.Select(n => columns.GetColumn(n));
 
-                foreach (var item in names.Select(n => columns.GetColumn(n)))
+                foreach (var item in members)
                 {
                     if (item != null)
                     {

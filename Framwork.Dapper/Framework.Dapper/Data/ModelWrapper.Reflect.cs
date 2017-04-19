@@ -150,7 +150,8 @@ namespace Framework.Data
                     }
                 }
 
-
+                //仿Dapper.SqlMapper.IsValueTuple
+                internal static bool IsValueTuple(Type type) => type != null && type.IsValueType && type.FullName.StartsWith("System.ValueTuple`");
             }
 
         }

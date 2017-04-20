@@ -94,11 +94,7 @@ namespace Framework.Data
                     InternalHelper.WrapConstructor(out NewIdentity);
                 }
 
-                internal static Dictionary<Type, DbType> typeMap
-                {
-                    get { return getTypeMap(); }
-                }
-
+                internal static Dictionary<Type, DbType> TypeMap => getTypeMap();
 
                 //仿照Dapper.LiteralToken
                 internal struct LiteralToken

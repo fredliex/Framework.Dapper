@@ -146,10 +146,9 @@ namespace Framework.Data
             //如果建構式只有一個, 且參數與欄位名稱相符, 就改用參數的順序回傳, 否則就傳回原順序
             var dict = listByName.ToDictionary(n => n.MemberName, StringComparer.OrdinalIgnoreCase);
             var listByCtor = new List<ModelColumnInfo>(ctorParams.Length);
-            ModelColumnInfo tmpInfo;
             for (var i = 0; i < ctorParams.Length; i++)
             {
-                if (!dict.TryGetValue(ctorParams[i].Name, out tmpInfo)) return listByName;
+                if (!dict.TryGetValue(ctorParams[i].Name, out var tmpInfo)) return listByName;
                 listByCtor.Add(tmpInfo);
             }
             return listByCtor;
@@ -163,8 +162,10 @@ namespace Framework.Data
             var expParamDict = Expression.Parameter(typeof(IDictionary<string, object>));
             var expParamObject = Expression.Parameter(typeof(object));
             var expVarModel = Expression.Variable(modelType);
-            var expBody = new List<Expression>();
-            expBody.Add(Expression.Assign(expVarModel, Expression.Convert(expParamObject, modelType)));
+            var expBody = new List<Expression>
+            {
+                Expression.Assign(expVarModel, Expression.Convert(expParamObject, modelType))
+            };
             expBody.AddRange(columns.Select(col => Expression.Call(expParamDict, methodDictionaryItemSet, Expression.Constant(col.ColumnName), col.GetGetterExpression(expVarModel))));
             var expBlock = Expression.Block(new[] { expVarModel }, expBody);
             var lambda = Expression.Lambda<Action<IDictionary<string, object>, object>>(expBlock, new[] { expParamDict, expParamObject });

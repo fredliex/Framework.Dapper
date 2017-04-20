@@ -108,10 +108,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Dapper-value-tuples\Dapper\Dapper.csproj">
-      <Project>{fc961392-014e-4886-8594-c8093b5ff438}</Project>
-      <Name>Dapper</Name>
-    </ProjectReference>
+    <PackageReference Include="Dapper">
+      <Version>1.50.2</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

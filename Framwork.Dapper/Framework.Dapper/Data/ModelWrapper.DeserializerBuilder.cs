@@ -106,7 +106,7 @@ namespace Framework.Data
                 if (type == typeof(object)) return Reflect.Dapper.GetDapperRowDeserializer(reader, startBound, length, returnNullIfFirstMissing);
                 var nullableType = type.IsValueType ? Nullable.GetUnderlyingType(type) : null;
                 var effectiveType = nullableType ?? type;
-                if (Reflect.Dapper.typeMap.ContainsKey(type) || type.FullName == Reflect.Dapper.LinqBinary) 
+                if (Reflect.Dapper.TypeMap.ContainsKey(type) || type.FullName == Reflect.Dapper.LinqBinary) 
                     return Reflect.Dapper.GetStructDeserializer(type, effectiveType, startBound);
                 // Enum
                 var enumInfo = EnumInfo.Get(effectiveType);

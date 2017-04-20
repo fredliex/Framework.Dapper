@@ -32,9 +32,9 @@ namespace Framework.Data
             private ITypeHandler _handler;
 
             private string memberName;
-            private Type memberType
+            private Type MemberType
             {
-                get { return _memberType; }
+                get => _memberType;
                 set
                 {
                     _dbType = null;
@@ -43,7 +43,7 @@ namespace Framework.Data
                 }
             }
 
-            private DbType dbType
+            private DbType DbType
             {
                 get
                 {
@@ -51,7 +51,7 @@ namespace Framework.Data
                     return _dbType.Value;
                 }
             }
-            private ITypeHandler handler
+            private ITypeHandler Handler
             {
                 get
                 {
@@ -61,17 +61,17 @@ namespace Framework.Data
             }
             private void _setDbTypeAndHandler()
             {
-                var nullUnderlyingType = Nullable.GetUnderlyingType(memberType);
+                var nullUnderlyingType = Nullable.GetUnderlyingType(MemberType);
 #pragma warning disable 618
-                _dbType = LookupDbType(nullUnderlyingType ?? memberType, memberName, true, out _handler);
+                _dbType = LookupDbType(nullUnderlyingType ?? MemberType, memberName, true, out _handler);
 #pragma warning restore 618
             }
-            private void setSizeVariable()
+            private void SetSizeVariable()
             {
                 if (!_hasDefineSizeVariable) il.DeclareLocal(typeof(int));
                 il.Emit(OpCodes.Stloc_1);
             }
-            private void getSizeVariable()
+            private void GetSizeVariable()
             {
                 il.Emit(OpCodes.Ldloc_1);
             }
@@ -138,16 +138,16 @@ namespace Framework.Data
                 foreach (var column in actualColumns)
                 {
                     memberName = column.MemberName;
-                    memberType = column.ElementType;
+                    MemberType = column.ElementType;
 
                     //如果有實作Dapper.SqlMapper.ICustomQueryParameter的話就按照Dapper的邏輯處理
-                    if (typeof(ICustomQueryParameter).IsAssignableFrom(memberType))
+                    if (typeof(ICustomQueryParameter).IsAssignableFrom(MemberType))
                     {
                         il.Emit(OpCodes.Ldloc_0); // stack is now [parameters] [typed-param]
                         column.GenerateGetEmit(il); // stack is [parameters] [custom]
                         il.Emit(OpCodes.Ldarg_0); // stack is now [parameters] [custom] [command]
                         il.Emit(OpCodes.Ldstr, memberName); // stack is now [parameters] [custom] [command] [name]
-                        il.EmitCall(OpCodes.Callvirt, memberType.GetMethod(nameof(ICustomQueryParameter.AddParameter)), null); // stack is now [parameters]
+                        il.EmitCall(OpCodes.Callvirt, MemberType.GetMethod(nameof(ICustomQueryParameter.AddParameter)), null); // stack is now [parameters]
                         continue;
                     }
 
@@ -166,10 +166,10 @@ namespace Framework.Data
                             var isNullableEnum = Nullable.GetUnderlyingType(column.ElementType) != null;
                             var converter = column.EnumInfo.Metadata.GetConverter(isNullableEnum, true);
                             il.EmitCall(OpCodes.Call, converter, null);     //stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
-                            memberType = converter.ReturnType;
+                            MemberType = converter.ReturnType;
                         }
 
-                        if (memberType.IsValueType) il.Emit(OpCodes.Box, memberType); // stack is [parameters] [command] [name] [boxed-value]
+                        if (MemberType.IsValueType) il.Emit(OpCodes.Box, MemberType); // stack is [parameters] [command] [name] [boxed-value]
                         il.EmitCall(OpCodes.Call, Reflect.SqlMapper_PackListParameters, null); // stack is [parameters]
                         continue;
                     }
@@ -245,24 +245,24 @@ namespace Framework.Data
                      */
 
 
-                    if (memberType.IsValueType)
+                    if (MemberType.IsValueType)
                     {
-                        if (handler == null)
+                        if (Handler == null)
                         {
                             //01. 有定義EnumValue的話, 取得對應值, 同時memberType換成EnumValue
                             if(column.EnumInfo != null)
                             {
-                                var isNullableEnum = Nullable.GetUnderlyingType(memberType) != null;
+                                var isNullableEnum = Nullable.GetUnderlyingType(MemberType) != null;
                                 var enumConverter = column.EnumInfo.Metadata.GetConverter(isNullableEnum, false);
                                 il.EmitCall(OpCodes.Call, enumConverter, null);     //stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
-                                memberType = isNullableEnum ? column.EnumInfo.Metadata.NullableValueType : column.EnumInfo.Metadata.UnderlyingValueType;
+                                MemberType = isNullableEnum ? column.EnumInfo.Metadata.NullableValueType : column.EnumInfo.Metadata.UnderlyingValueType;
                             }
 
                             //是Enum的話, 直接換成基礎型別
-                            if (memberType.IsEnum) memberType = GetEnumUnderlyingType(memberType);
+                            if (MemberType.IsEnum) MemberType = GetEnumUnderlyingType(MemberType);
 
                             //02. value = (object)value;     //boxed
-                            il.Emit(OpCodes.Box, memberType);  //stack is [parameters] [parameters] [parameter] [parameter] [boxed-value]
+                            il.Emit(OpCodes.Box, MemberType);  //stack is [parameters] [parameters] [parameter] [parameter] [boxed-value]
                         }
                     }
 
@@ -270,7 +270,7 @@ namespace Framework.Data
                     Label? nullHandleDone = null;
                     Type underlyingType = null;
                     //如果可能為null的話, 才做null的判斷處理
-                    if (!memberType.IsValueType || (underlyingType = Nullable.GetUnderlyingType(memberType)) != null)
+                    if (!MemberType.IsValueType || (underlyingType = Nullable.GetUnderlyingType(MemberType)) != null)
                     {
                         var notNullHandle = il.DefineLabel();
                         //03. 判斷非null的話跳notNullHandle
@@ -282,10 +282,10 @@ namespace Framework.Data
                             //04. value = NullMapping;
                             il.Emit(OpCodes.Pop);       // stack is [parameters] [parameters] [parameter] [parameter]
                             il.EmitConstant(column.NullMapping);     // stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
-                            memberType = column.NullMapping.GetType();
+                            MemberType = column.NullMapping.GetType();
 
                             //05. 是值類型的話, box
-                            if (memberType.IsValueType) il.Emit(OpCodes.Box, memberType);  //stack is [parameters] [parameters] [parameter] [parameter] [boxed-value]
+                            if (MemberType.IsValueType) il.Emit(OpCodes.Box, MemberType);  //stack is [parameters] [parameters] [parameter] [parameter] [boxed-value]
                         }
                         else
                         {
@@ -293,10 +293,10 @@ namespace Framework.Data
                             il.Emit(OpCodes.Pop); // relative stack empty
                             il.Emit(OpCodes.Ldsfld, Reflect.DBNull_Value); // relative stack [DBNull]
                             //07. 如果DbType是字串, 設定 區域變數size = 0
-                            if (dbType == DbType.String || dbType == DbType.AnsiString)
+                            if (DbType == DbType.String || DbType == DbType.AnsiString)
                             {
                                 Reflect.Dapper.EmitInt32(il, 0);
-                                setSizeVariable();
+                                SetSizeVariable();
                             }
                             //08. 跳到nullHandleDone
                             nullHandleDone = il.DefineLabel();
@@ -306,28 +306,28 @@ namespace Framework.Data
                         il.MarkLabel(notNullHandle);
                     }
 
-                    if (memberType.IsValueType)
+                    if (MemberType.IsValueType)
                     {
                         //10. 如果是Enum或Nullable<Enum>且無handler, value = (object)(Enum基礎型別)value;  //boxed
-                        var nullType = Nullable.GetUnderlyingType(memberType);
-                        if (nullType != null) memberType = nullType;
-                        if (memberType.IsEnum && handler == null)
+                        var nullType = Nullable.GetUnderlyingType(MemberType);
+                        if (nullType != null) MemberType = nullType;
+                        if (MemberType.IsEnum && Handler == null)
                         {
                             //il.Emit(OpCodes.Unbox, memberType);
-                            il.Emit(OpCodes.Unbox_Any, memberType);
-                            memberType = GetEnumUnderlyingType(memberType);
-                            il.Emit(OpCodes.Box, memberType);
+                            il.Emit(OpCodes.Unbox_Any, MemberType);
+                            MemberType = GetEnumUnderlyingType(MemberType);
+                            il.Emit(OpCodes.Box, MemberType);
                         }
                     }
                     else
                     {
-                        if (memberType.FullName == Reflect.Dapper.LinqBinary)  //System.Data.Linq.Binary
+                        if (MemberType.FullName == Reflect.Dapper.LinqBinary)  //System.Data.Linq.Binary
                         {
                             //11. 是System.Data.Linq.Binary的話, value = value.ToArray();
-                            il.EmitCall(OpCodes.Callvirt, memberType.GetMethod("ToArray", BindingFlags.Public | BindingFlags.Instance), null); // stack is [parameters] [parameters] [parameter] [parameter] [byte[]]
-                            memberType = typeof(byte[]);
+                            il.EmitCall(OpCodes.Callvirt, MemberType.GetMethod("ToArray", BindingFlags.Public | BindingFlags.Instance), null); // stack is [parameters] [parameters] [parameter] [parameter] [byte[]]
+                            MemberType = typeof(byte[]);
                         }
-                        else if (dbType == DbType.String || dbType == DbType.AnsiString)
+                        else if (DbType == DbType.String || DbType == DbType.AnsiString)
                         {
                             //12. size = value.length > 4000 ? -1 : 4000;
                             il.Emit(OpCodes.Dup);    // stack is [parameters] [parameters] [parameter] [parameter] [typed-value] [typed-value]
@@ -341,17 +341,17 @@ namespace Framework.Data
                             il.MarkLabel(isLong);
                             Reflect.Dapper.EmitInt32(il, -1); // stack is [parameters] [parameters] [parameter] [parameter] [typed-value] [-1]
                             il.MarkLabel(lenDone);
-                            setSizeVariable();  // stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
+                            SetSizeVariable();  // stack is [parameters] [parameters] [parameter] [parameter] [typed-value]
                         }
                     }
                     //13. 有nullHandleDone的話, 標記nullHandleDone
                     if (nullHandleDone.HasValue) il.MarkLabel(nullHandleDone.Value);
 
-                    if (handler != null)
+                    if (Handler != null)
                     {
                         //14. 有handler的話, 呼叫SqlMapper.TypeHandlerCache<T>.SetValue(parameter, value);
 #pragma warning disable 618
-                        il.Emit(OpCodes.Call, typeof(TypeHandlerCache<>).MakeGenericType(memberType).GetMethod(nameof(TypeHandlerCache<int>.SetValue))); // stack is now [parameters] [parameters] [parameter]
+                        il.Emit(OpCodes.Call, typeof(TypeHandlerCache<>).MakeGenericType(MemberType).GetMethod(nameof(TypeHandlerCache<int>.SetValue))); // stack is now [parameters] [parameters] [parameter]
 #pragma warning restore 618
                     } 
                     else
@@ -359,11 +359,11 @@ namespace Framework.Data
                         //15. paramter.Value = value;
                         il.EmitCall(OpCodes.Callvirt, Reflect.IDataParameter_Value_Set, null);// stack is now [parameters] [parameters] [parameter]
 
-                        if (dbType != DbType.Time)
+                        if (DbType != DbType.Time)
                         {
                             il.Emit(OpCodes.Dup); // stack is now [parameters] [parameters] [parameter] [parameter]
                             
-                            if (dbType == DbType.Object && memberType == typeof(object)) // includes dynamic
+                            if (DbType == DbType.Object && MemberType == typeof(object)) // includes dynamic
                             {
                                 //16. 型別為物件 且 DbType是Object, paramter.DbType = SqlMapper.GetDbType(paramter.Value)
                                 // look it up from the param value
@@ -374,21 +374,21 @@ namespace Framework.Data
                             else
                             {
                                 //17. paramter.DbType = dbType;
-                                Reflect.Dapper.EmitInt32(il, (int)dbType);// stack is now [parameters] [parameters] [parameter] [parameter] [db-type]
+                                Reflect.Dapper.EmitInt32(il, (int)DbType);// stack is now [parameters] [parameters] [parameter] [parameter] [db-type]
                             }
                             il.EmitCall(OpCodes.Callvirt, Reflect.IDataParameter_DbType_Set, null);// stack is now [parameters] [parameters] [parameter]
                         }
 
                         //18. if (loc_1 != 0) paramter.Size = loc_1;
-                        if (dbType == DbType.String || dbType == DbType.AnsiString)
+                        if (DbType == DbType.String || DbType == DbType.AnsiString)
                         {
                             var endOfSize = il.DefineLabel();
                             // don't set if 0
-                            getSizeVariable();  // [parameters] [parameters] [parameter] [size]
+                            GetSizeVariable();  // [parameters] [parameters] [parameter] [size]
                             il.Emit(OpCodes.Brfalse_S, endOfSize); // [parameters] [parameters] [parameter]
 
                             il.Emit(OpCodes.Dup);// stack is now [parameters] [parameters] [parameter] [parameter]
-                            getSizeVariable();   // stack is now [parameters] [parameters] [parameter] [parameter] [size]
+                            GetSizeVariable();   // stack is now [parameters] [parameters] [parameter] [parameter] [size]
                             il.EmitCall(OpCodes.Callvirt, Reflect.IDbDataParameter_Size_Set, null); // stack is now [parameters] [parameters] [parameter]
 
                             il.MarkLabel(endOfSize);

@@ -95,8 +95,9 @@ namespace Framework.Data
                 return type;
             });
             //巡迴dict來推斷value型別, 無法推斷的話就當是object型別
-            object value;
-            lackNames.ForEach(key => colTypes[key] = dicts.Select(n => n.TryGetValue(key, out value) ? value?.GetType() : null).FirstOrDefault(n => n != null) ?? typeof(object));
+            lackNames.ForEach(key => 
+                colTypes[key] = dicts.Select(n => n.TryGetValue(key, out var value) ? value?.GetType() : null).FirstOrDefault(n => n != null) ?? typeof(object)
+            );
             //回傳
             return colTypes.Select(n => new ColumnInfo(n.Key, n.Value, null));
         }

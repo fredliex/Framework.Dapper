@@ -43,16 +43,11 @@ namespace Framework.Data
             }
         }
 
-        public ModelColumnInfo GetColumn(string columnName)
-        {
-            int colIndex;
-            return columnMap.TryGetValue(columnName, out colIndex) ? cols[colIndex] : null;
-        }
+        public ModelColumnInfo GetColumn(string columnName) => 
+            columnMap.TryGetValue(columnName, out var colIndex) ? cols[colIndex] : null;
 
-        internal static Action<IDictionary<string, object>, object> GenerateDictionaryFiller(Type modelType)
-        {
-            return ModelColumnInfo.GenerateDictionaryFiller(modelType, ModelTableInfo.Get(modelType).Columns);
-        }
+        internal static Action<IDictionary<string, object>, object> GenerateDictionaryFiller(Type modelType) =>
+            ModelColumnInfo.GenerateDictionaryFiller(modelType, ModelTableInfo.Get(modelType).Columns);
 
     }
 }

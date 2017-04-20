@@ -24,16 +24,12 @@ namespace Framework.Data
                     #region 單個
                     public static T ToClass<TEnum, T>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where T : class
                     {
-                        T value;
-                        bool isNull;
-                        if (DbValueMetadata<TEnum, T>.TryGetValue(enumValue, out value, out isNull)) return isNull ? null : value;
+                        if (DbValueMetadata<TEnum, T>.TryGetValue(enumValue, out var value, out var isNull)) return isNull ? null : value;
                         throw new Exception($"未定義{enumValue}的對應值");
                     }
                     public static T? ToStruct<TEnum, T>(TEnum enumValue) where TEnum : struct, IComparable, IFormattable, IConvertible where T : struct
                     {
-                        T value;
-                        bool isNull;
-                        if (DbValueMetadata<TEnum, T>.TryGetValue(enumValue, out value, out isNull)) return isNull ? (T?)null : value;
+                        if (DbValueMetadata<TEnum, T>.TryGetValue(enumValue, out var value, out var isNull)) return isNull ? (T?)null : value;
                         throw new Exception($"未定義{enumValue}的對應值");
                     }
 
@@ -264,8 +260,7 @@ namespace Framework.Data
                 //public static TEnum? ParseMappingWithDbnull(object value) => nullValue.HasValue && (value == null || value == DBNull.Value) ? nullValue.Value : ParseMapping(value);
                 public static TEnum ParseWithoutCheck(object value)
                 {
-                    TEnum val;
-                    if (toEnumMap.TryGetValue((TDbValue)value, out val)) return val;
+                    if (toEnumMap.TryGetValue((TDbValue)value, out var val)) return val;
                     throw new Exception($"{typeof(TEnum)}未定義{value}的DbValueAttribute");
                 }
                 public static TEnum ParseWithCheck(object value)
@@ -279,8 +274,7 @@ namespace Framework.Data
                 }
                 public static TEnum? ParseNullableWithoutCheck(object value)
                 {
-                    TEnum val;
-                    return toEnumMap.TryGetValue((TDbValue)value, out val) ? val : (TEnum?)null;
+                    return toEnumMap.TryGetValue((TDbValue)value, out var val) ? val : (TEnum?)null;
                 }
                 public static TEnum? ParseNullableWithCheck(object value)
                 {
@@ -321,9 +315,7 @@ namespace Framework.Data
                 if (!enumType.IsEnum) return null;
                 return cache.GetOrAdd(enumType, t =>
                 {
-                    object nullEnum;
-                    Type dbValueUnderlyingType;
-                    var mapping = DbValueAttribute.GetMapping(t, out nullEnum, out dbValueUnderlyingType);
+                    var mapping = DbValueAttribute.GetMapping(t, out var nullEnum, out var dbValueUnderlyingType);
                     if (mapping == null)
                     {
                         var converter = (MetadataBase)typeof(UnderlyMetadata<>).MakeGenericType(t).GetConstructor(Type.EmptyTypes).Invoke(new object[0]);

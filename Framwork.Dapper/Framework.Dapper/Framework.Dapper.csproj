@@ -45,6 +45,7 @@
     <Compile Include="Data\ColumnAttribute.cs" />
     <Compile Include="Data\ColumnBehavior.cs" />
     <Compile Include="Data\ColumnInfo.cs" />
+    <Compile Include="Data\CommandOption.cs" />
     <Compile Include="Data\DataModelHelper.cs" />
     <Compile Include="Data\IRepository.cs" />
     <Compile Include="Data\ModelMerger.Comparer.cs">

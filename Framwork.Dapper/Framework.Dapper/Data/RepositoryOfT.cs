@@ -37,21 +37,21 @@ namespace Framework.Data
         /// <param name="param">查詢條件，null表示查詢任何資料。</param>
         /// <param name="bufferResult">是否將結果全部暫存於記憶體。若處理大量資料時不建議暫存。</param>
         /// <returns></returns>
-        public IEnumerable<T> Select(object filter = null, bool buffered = true)
+        public IEnumerable<T> Select(object filter = null, CommandOption? option = null)
         {
             var filters = InternalHelper.GetElementValues(filter);
-            if(filters != null) return Selects(filters, buffered);
+            if(filters != null) return Selects(filters, option);
             var metadata = GetSelectMetadata(new RepositoryMatedata(null, filter));
-            return conn.Query<T>(metadata.SqlStr, metadata.Param, buffered: buffered);
+            return conn.Query<T>(metadata.SqlStr, metadata.Param, option);
         }
 
-        private IEnumerable<T> Selects(IEnumerable<object> filters, bool buffered = true)
+        private IEnumerable<T> Selects(IEnumerable<object> filters, CommandOption? option = null)
         {
             var firstFilter = filters.FirstOrDefault();
             if (firstFilter == null) throw new ArgumentNullException("filters不可為null");
             var sqlStr = GetSelectMetadata(new RepositoryMatedata(null, firstFilter)).SqlStr;
-            var datas = filters.SelectMany(f => conn.Query<T>(sqlStr, f, buffered: buffered));
-            return buffered ? datas.ToList() : datas;
+            var datas = filters.SelectMany(f => conn.Query<T>(sqlStr, f, option));
+            return option?.Buffered == false ? datas : datas.ToList();
         }
 
         /// <summary>依照matedata來產生sql</summary>

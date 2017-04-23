@@ -142,5 +142,20 @@ namespace Framework.Data
             });
         }
 
+        /// <summary>計算Hash Code。</summary>
+        /// <param name="hashCodes"></param>
+        /// <returns></returns>
+        internal static int CombineHashCodes(int[] hashCodes)
+        {
+            //ref: http://stackoverflow.com/questions/263400/what-is-the-best-algorithm-for-an-overridden-system-object-gethashcode
+            int hash = 17;
+            // Suitable nullity checks etc, of course :)
+            foreach(var code in hashCodes)
+            {
+                hash = hash * 23 + code;
+            }
+            return hash;
+        }
+
     }
 }

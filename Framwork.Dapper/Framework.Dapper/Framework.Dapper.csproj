@@ -48,6 +48,9 @@
     <Compile Include="Data\CommandOption.cs" />
     <Compile Include="Data\DataModelHelper.cs" />
     <Compile Include="Data\IRepository.cs" />
+    <Compile Include="Data\ModelColumnInfoCollection.cs">
+      <DependentUpon>ModelColumnInfo.cs</DependentUpon>
+    </Compile>
     <Compile Include="Data\ModelMerger.Comparer.cs">
       <DependentUpon>ModelMerger.cs</DependentUpon>
     </Compile>
@@ -59,7 +62,6 @@
     <Compile Include="Data\RepositoryOption.cs" />
     <Compile Include="Data\_DbWrapper\DbWrapperHelper.cs" />
     <Compile Include="Data\_DbWrapper\DbConnectionWrapper.cs" />
-    <Compile Include="Data\ModelColumnInfoCollection.cs" />
     <Compile Include="Data\DbHelper.cs" />
     <Compile Include="Data\DynamicParameters.cs" />
     <Compile Include="Data\_DbWrapper\DbWrapperHelper.DbIntercept.cs">

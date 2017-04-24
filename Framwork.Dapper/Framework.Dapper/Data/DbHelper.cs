@@ -69,7 +69,7 @@ namespace Framework.Data
             using (var reader = SqlMapper.ExecuteReader(conn, commandDefinition, CommandBehavior.SequentialAccess | CommandBehavior.SingleResult))
             {
                 var resultType = typeof(T);
-                var deserializer = cache.GetOrAddDeserializer(new[] { resultType }, types => new[] { GetDeserializer(types[0], reader) })[0];
+                var deserializer = cache.GetDeserializer(new[] { resultType }, types => new[] { GetDeserializer(types[0], reader) })[0];
                 while (reader.Read())
                 {
                     yield return (T)deserializer(reader);
@@ -147,7 +147,7 @@ namespace Framework.Data
             using (var reader = SqlMapper.ExecuteReader(conn, commandDefinition, CommandBehavior.SequentialAccess | CommandBehavior.SingleResult))
             {
                 var resultTypes = new[] { typeof(TFirst), typeof(TSecond), typeof(TThird), typeof(TFourth), typeof(TFifth), typeof(TSixth), typeof(TSeventh) };
-                var deserializers = cache.GetOrAddDeserializer(resultTypes, types => GetDeserializers(types, splitOn, reader));
+                var deserializers = cache.GetDeserializer(resultTypes, types => GetDeserializers(types, splitOn, reader));
                 var mapIt = ModelWrapper.Reflect.Dapper.GenerateMapper<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn>(deserializers, map);
 
                 if (mapIt != null)

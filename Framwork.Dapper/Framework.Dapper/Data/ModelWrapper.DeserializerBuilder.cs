@@ -31,23 +31,14 @@ namespace Framework.Data
             private static readonly MethodInfo readChar = typeof(DeserializerBuilder).GetMethod(nameof(DeserializerBuilder.ReadChar), BindingFlags.Static | BindingFlags.NonPublic);
             private static readonly MethodInfo readGuid = typeof(DeserializerBuilder).GetMethod(nameof(DeserializerBuilder.ReadGuid), BindingFlags.Static | BindingFlags.NonPublic);
 
-            private static string TrimRight(string str)
-            {
-                return str.Trim(' ');
-            }
+            private static string TrimRight(string str) => str.Trim(' ');
 
-            private static char ReadChar(object value)
-            {
-                string s = value as string;
-                if (s == null || s.Length != 1) throw new ArgumentException("A single-character was expected", nameof(value));
-                return s[0];
-            }
-            private static Guid ReadGuid(object value)
-            {
-                if (value is byte[]) return new Guid((byte[])value);
-                if (value is string) return Guid.Parse((string)value);
-                return (Guid)value;
-            }
+            private static char ReadChar(object value) => value is string s && s.Length == 1 ? s[0] : throw new ArgumentException("A single-character was expected", nameof(value));
+
+            private static Guid ReadGuid(object value) =>
+                value is byte[] bytes ? new Guid(bytes) :
+                value is string str ? Guid.Parse(str) :
+                (Guid)value;
 
             // 仿dapper裡面的GenerateDeserializers
             internal static Func<IDataReader, object>[] GetDeserializers(Type[] types, string splitOn, IDataReader reader)
@@ -301,7 +292,7 @@ namespace Framework.Data
                 var table = ModelTableInfo.Get(type);
                 var columns = table.Columns;
                 Dictionary<Type, LocalBuilder> localNullableBuilders = null;    //放置nullable<T>的預設值
-                var members = Reflect.Dapper.IsValueTuple(type) ? 
+                var members = type.IsValueTuple() ? 
                     names.Select((n, i) => columns.GetColumn($"Item{i + 1}")) : names.Select(n => columns.GetColumn(n));
 
                 foreach (var item in members)

@@ -14,10 +14,7 @@ namespace Framework.Data
         private static ConcurrentDictionary<Type, ModelTableInfo> cache = new ConcurrentDictionary<Type, ModelTableInfo>();
 
         /// <summary>取得Table資訊</summary>
-        internal static ModelTableInfo Get(Type modelType)
-        {
-            return cache.GetOrAdd(modelType, t => new ModelTableInfo(t));
-        }
+        internal static ModelTableInfo Get(Type modelType) => cache.GetOrAdd(modelType, t => new ModelTableInfo(t));
 
         /// <summary>資料庫名稱</summary>
         public string Database { get; private set; }

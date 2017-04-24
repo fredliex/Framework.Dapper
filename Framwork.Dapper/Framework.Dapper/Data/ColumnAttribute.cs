@@ -30,13 +30,5 @@ namespace Framework.Data
         {
             Name = name;
         }
-
-        /// <summary>用來給SqlMapper裡面Il呼叫用的</summary>
-        /// <param name="str"></param>
-        /// <returns></returns>
-        internal static string TrimRight(string str)
-        {
-            return str.TrimEnd(' ');
-        }
     }
 }

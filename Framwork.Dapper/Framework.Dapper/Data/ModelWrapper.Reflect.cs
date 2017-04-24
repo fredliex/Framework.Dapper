@@ -66,9 +66,6 @@ namespace Framework.Data
                 //Dapper.DynamicParameters
                 internal static readonly DbType EnumerableMultiParameter;
 
-                //Dapper.SqlMapper.Identity
-                internal static readonly Func<string, CommandType?, IDbConnection, Type, Type, Type[], SqlMapper.Identity> NewIdentity;
-
                 //其他
                 private static Func<Dictionary<Type, DbType>> getTypeMap = Expression.Lambda<Func<Dictionary<Type, DbType>>>(Expression.Field(null, typeof(SqlMapper).GetField("typeMap", BindingFlags.Static | BindingFlags.NonPublic))).Compile();
 
@@ -90,8 +87,6 @@ namespace Framework.Data
                     InternalHelper.WrapMethod(typeof(SqlMapper), "GetNextSplit", out GetNextSplit);
 
                     InternalHelper.WrapField(typeof(global::Dapper.DynamicParameters), "EnumerableMultiParameter", out EnumerableMultiParameter);
-
-                    InternalHelper.WrapConstructor(out NewIdentity);
                 }
 
                 internal static Dictionary<Type, DbType> TypeMap => getTypeMap();
@@ -125,12 +120,6 @@ namespace Framework.Data
                     return list;
                 }
 
-                //仿Dapper.TypeExtensions.GetTypeCode
-                internal static TypeCode GetTypeCode(Type type)
-                {
-                    return Type.GetTypeCode(type);
-                }
-
                 //仿Dapper.SqlMapper.GenerateMapper
                 internal static Func<IDataReader, TReturn> GenerateMapper<TFirst, TSecond, TThird, TFourth, TFifth, TSixth, TSeventh, TReturn>(Func<IDataReader, object>[] des, object map)
                 {
@@ -145,9 +134,6 @@ namespace Framework.Data
                         default: throw new NotSupportedException();
                     }
                 }
-
-                //仿Dapper.SqlMapper.IsValueTuple
-                internal static bool IsValueTuple(Type type) => type != null && type.IsValueType && type.FullName.StartsWith("System.ValueTuple`");
             }
 
         }

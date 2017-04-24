@@ -147,15 +147,22 @@ namespace Framework.Data
         /// <returns></returns>
         internal static int CombineHashCodes(int[] hashCodes)
         {
+            //如果是null的話放0
             //ref: http://stackoverflow.com/questions/263400/what-is-the-best-algorithm-for-an-overridden-system-object-gethashcode
-            int hash = 17;
-            // Suitable nullity checks etc, of course :)
-            foreach(var code in hashCodes)
+            unchecked
             {
-                hash = hash * 23 + code;
+                int hash = 17;
+                foreach (var code in hashCodes)
+                {
+                    hash = hash * 23 + code;
+                }
+                return hash;
             }
-            return hash;
         }
+
+
+        internal static TypeCode GetTypeCode(this Type type) => Type.GetTypeCode(type);
+        internal static bool IsValueTuple(this Type type) => type != null && type.IsValueType && type.FullName.StartsWith("System.ValueTuple`");
 
     }
 }

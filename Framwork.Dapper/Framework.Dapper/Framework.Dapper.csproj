@@ -47,7 +47,7 @@
     <Compile Include="Data\ColumnInfo.cs" />
     <Compile Include="Data\CommandOption.cs" />
     <Compile Include="Data\DataModelHelper.cs" />
-    <Compile Include="Data\IRepository.cs" />
+    <Compile Include="Data\_Repository\IRepository.cs" />
     <Compile Include="Data\ModelColumnInfoCollection.cs">
       <DependentUpon>ModelColumnInfo.cs</DependentUpon>
     </Compile>
@@ -58,8 +58,8 @@
     <Compile Include="Data\ModelMerger.Set.cs">
       <DependentUpon>ModelMerger.cs</DependentUpon>
     </Compile>
-    <Compile Include="Data\RepositoryOfT.cs" />
-    <Compile Include="Data\RepositoryOption.cs" />
+    <Compile Include="Data\_Repository\RepositoryOfT.cs" />
+    <Compile Include="Data\_Repository\RepositoryOption.cs" />
     <Compile Include="Data\_DbWrapper\DbWrapperHelper.cs" />
     <Compile Include="Data\_DbWrapper\DbConnectionWrapper.cs" />
     <Compile Include="Data\DbHelper.cs" />
@@ -97,14 +97,8 @@
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
     <Compile Include="Data\NonColumnAttribute.cs" />
-    <Compile Include="Data\Repository.cs" />
-    <Compile Include="Data\Repository.Paramater.cs">
-      <DependentUpon>Repository.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Data\Repository.ParameterMatedata.cs">
-      <DependentUpon>Repository.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Data\RepositoryMatedata.cs" />
+    <Compile Include="Data\_Repository\Repository.cs" />
+    <Compile Include="Data\_Repository\RepositoryMatedata.cs" />
     <Compile Include="Data\TableAttribute.cs" />
     <Compile Include="Data\ModelTableInfo.cs" />
     <Compile Include="Data\DbValueAttribute.cs" />

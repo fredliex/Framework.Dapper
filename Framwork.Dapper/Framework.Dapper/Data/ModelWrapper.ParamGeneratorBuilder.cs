@@ -460,7 +460,7 @@ namespace Framework.Data
                             il.Emit(OpCodes.Ldloc_0); // command, sql, typed parameter
                             prop.GenerateGetEmit(il); // command, sql, typed value
                             Type propType = prop.ElementType;
-                            var typeCode = Reflect.Dapper.GetTypeCode(propType);
+                            var typeCode = propType.GetTypeCode();
                             switch (typeCode)
                             {
                                 case TypeCode.Boolean:

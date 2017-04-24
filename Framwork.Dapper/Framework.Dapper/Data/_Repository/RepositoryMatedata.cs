@@ -36,15 +36,6 @@ namespace Framework.Data
                 return ColumnInfo.Resolve(new[] { dict });
             }
 
-            /*
-            var dicts = param as IEnumerable<IDictionary<string, object>>;
-            if (dicts != null)
-            {
-                elemType = dicts.FirstOrDefault()?.GetType();
-                return ColumnInfo.Resolve(dicts);
-            }
-            */
-
             var paramType = filter.GetType();
             elemType = InternalHelper.GetElementType(paramType) ?? paramType;
 

@@ -10,15 +10,11 @@ namespace Framework.Data
 {
     public struct CommandOption
     {
-        /// <summary>
-        /// The effective timeout for the command
-        /// </summary>
+        /// <summary>command 執行timeout</summary>
         public int? CommandTimeout;
 
         private CommandType commandType;
-        /// <summary>
-        /// The type of command that the command-text represents
-        /// </summary>
+        /// <summary>Command類型</summary>
         public CommandType CommandType
         {
             get => commandType == default(CommandType) ? (commandType = CommandType.Text) : commandType;
@@ -26,9 +22,7 @@ namespace Framework.Data
         }
 
         private bool? buffered;
-        /// <summary>
-        /// Should data be buffered before returning?
-        /// </summary>
+        /// <summary>select的結果是否緩衝。建議非大量資料時皆採緩衝以加快處理速度並讓連線盡早釋放。</summary>
         public bool Buffered
         {
             get => buffered.GetValueOrDefault(true);

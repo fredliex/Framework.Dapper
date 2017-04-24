@@ -19,46 +19,65 @@ namespace Framework.Data
 
         internal sealed class Cache
         {
-            private sealed class DeserializerEqualityComparer : EqualityComparer<Type[]>
+            #region static
+            private sealed class SerializerIdentity : IEquatable<SerializerIdentity>
             {
-                public override bool Equals(Type[] x, Type[] y)
+                private readonly string connectionString;
+                private readonly CommandType commandType;
+                private readonly string sql;
+                private readonly Type paramType;
+                private readonly int hashCode;  //we *know* we are using this in a dictionary, so pre-compute this
+
+                public SerializerIdentity(IDbConnection conn, CommandType commandType, string sql, Type paramType)
                 {
-                    throw new NotImplementedException();
+                    connectionString = conn.ConnectionString;
+                    this.commandType = commandType;
+                    this.sql = sql;
+                    this.paramType = paramType;
+                    hashCode = InternalHelper.CombineHashCodes(new[] {
+                        connectionString == null ? 0 : StringComparer.Ordinal.GetHashCode(connectionString),
+                        commandType.GetHashCode(),
+                        sql?.GetHashCode() ?? 0,
+                        paramType?.GetHashCode() ?? 0
+                    });
                 }
+
+                public override int GetHashCode() => hashCode;
+                public bool Equals(SerializerIdentity other) =>
+                    other != null &&
+                    connectionString == other.connectionString &&
+                    commandType == other.commandType &&
+                    sql == other.sql &&
+                    paramType == other.paramType;
+            }
+
+            private static ConcurrentDictionary<SerializerIdentity, Cache> storage = new ConcurrentDictionary<SerializerIdentity, Cache>();
+            public static Cache GetCache(IDbConnection conn, CommandType commandType, string sql, Type paramType, Func<Func<object, object>> paramWrapperGetter) =>
+                storage.GetOrAdd(new SerializerIdentity(conn, commandType, sql, paramType), x => new Cache { ParamWrapper = paramWrapperGetter() });
+            #endregion
+
+            private sealed class DeserializerComparer : EqualityComparer<Type[]>
+            {
+                public override bool Equals(Type[] x, Type[] y) => x.SequenceEqual(y);
 
                 public override int GetHashCode(Type[] obj)
                 {
-                    throw new NotImplementedException();
+                    var hashCodes = new int[obj.Length];
+                    for (var i = 0; i < obj.Length; i++)
+                    {
+                        hashCodes[i] = obj == null ? 0 : obj.GetHashCode();
+                    }
+                    return InternalHelper.CombineHashCodes(hashCodes);
                 }
             }
-
-            #region static 
-            private static ConcurrentDictionary<SqlMapper.Identity, Cache> storage = new ConcurrentDictionary<SqlMapper.Identity, Cache>();
-            public static Cache GetCache(IDbConnection conn, CommandType commandType, string commandText, Type paramType, Func<Func<object, object>> paramWrapperGetter)
-            {
-                var identity = ModelWrapper.Reflect.Dapper.NewIdentity(commandText, commandType, conn, paramType, paramType, null);
-                return storage.GetOrAdd(identity, x => new Cache { ParamWrapper = paramWrapperGetter() });
-            }
-            #endregion
-
-
 
             /// <summary>包裝器，用以將外部傳入的參數包裝成內部丟給Dapper用的參數。</summary>
             public Func<object, object> ParamWrapper { get; private set; }
 
-            private readonly ConcurrentDictionary<int, Func<IDataReader, object>[]> deserializers = new ConcurrentDictionary<int, Func<IDataReader, object>[]>();
-            public Func<IDataReader, object>[] GetOrAddDeserializer(Type[] resultTypes, Func<Type[], Func<IDataReader, object>[]> valueFactory)
-            {
-                var hashCode = 17;
-                if (resultTypes != null)
-                {
-                    foreach (var t in resultTypes)
-                    {
-                        hashCode = hashCode * 23 + (t?.GetHashCode() ?? 0);
-                    }
-                }
-                return deserializers.GetOrAdd(hashCode, x => valueFactory(resultTypes));
-            }
+            private readonly ConcurrentDictionary<Type[], Func<IDataReader, object>[]> deserializers = 
+                new ConcurrentDictionary<Type[], Func<IDataReader, object>[]>(new DeserializerComparer());
+            public Func<IDataReader, object>[] GetDeserializer(Type[] resultTypes, Func<Type[], Func<IDataReader, object>[]> valueFactory) =>
+                deserializers.GetOrAdd(resultTypes, x => valueFactory(resultTypes));
         }
     }
 }

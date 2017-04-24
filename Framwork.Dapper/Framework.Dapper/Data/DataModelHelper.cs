@@ -33,11 +33,7 @@ namespace Framework.Data
 
         #endregion
 
-
-        #region model compare
         public static ModelMerger<T> Merge<T>(this IEnumerable<T> oldModels, IEnumerable<T> newModels, params Expression<Func<T, object>>[] keyExpressions) where T : IDataModel =>
             new ModelMerger<T>(oldModels, newModels, keyExpressions);
-
-        #endregion
     }
 }

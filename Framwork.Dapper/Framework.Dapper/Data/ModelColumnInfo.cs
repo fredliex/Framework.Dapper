@@ -118,7 +118,7 @@ namespace Framework.Data
                     return new ModelColumnInfo(isField ? null : (PropertyInfo)n.Value.member, isField ? (FieldInfo)n.Value.member : null, n.Value.attr, isStructModel.Value);
                 });
             }
-            else if (Reflect.Dapper.IsValueTuple(modelType))
+            else if (modelType.IsValueTuple())
             {
                 columns = modelType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
                     .Select(f => new ModelColumnInfo(null, f, null, isStructModel.Value));
@@ -162,10 +162,7 @@ namespace Framework.Data
             var expParamDict = Expression.Parameter(typeof(IDictionary<string, object>));
             var expParamObject = Expression.Parameter(typeof(object));
             var expVarModel = Expression.Variable(modelType);
-            var expBody = new List<Expression>
-            {
-                Expression.Assign(expVarModel, Expression.Convert(expParamObject, modelType))
-            };
+            var expBody = new List<Expression>(new[] { Expression.Assign(expVarModel, Expression.Convert(expParamObject, modelType)) });
             expBody.AddRange(columns.Select(col => Expression.Call(expParamDict, methodDictionaryItemSet, Expression.Constant(col.ColumnName), col.GetGetterExpression(expVarModel))));
             var expBlock = Expression.Block(new[] { expVarModel }, expBody);
             var lambda = Expression.Lambda<Action<IDictionary<string, object>, object>>(expBlock, new[] { expParamDict, expParamObject });

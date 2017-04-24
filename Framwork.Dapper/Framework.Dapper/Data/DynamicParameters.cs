@@ -36,8 +36,7 @@ namespace Framework.Data
             public void AddDynamicParams(object param)
             {
                 //同是DynamicParametersWrapper
-                var wrapper = param as DynamicParametersWrapper;
-                if (wrapper != null)
+                if (param is DynamicParametersWrapper wrapper)
                 {
                     if (wrapper.Templates != null)
                     {
@@ -49,8 +48,7 @@ namespace Framework.Data
                 }
 
                 //是Dictionary, 須額外處理EnumMapping
-                var dictionary = param as IEnumerable<KeyValuePair<string, object>>;
-                if (dictionary != null)
+                if (param is IEnumerable<KeyValuePair<string, object>> dictionary)
                 {
                     Instance.AddDynamicParams(InternalHelper.WrapDictionaryParam(dictionary));
                     return;
@@ -67,10 +65,7 @@ namespace Framework.Data
 
         public DynamicParameters() { }
 
-        public DynamicParameters(object template)
-        {
-            AddDynamicParams(template);
-        }
+        public DynamicParameters(object template) => AddDynamicParams(template);
 
         public void AddDynamicParams(object param)
         {
@@ -78,21 +73,14 @@ namespace Framework.Data
             Wrapper.AddDynamicParams(param);
         }
 
-        public void Add(string name, object value, DbType? dbType, ParameterDirection? direction, int? size)
-        {
+        public void Add(string name, object value, DbType? dbType, ParameterDirection? direction, int? size) =>
             Wrapper.Instance.Add(name, value, dbType, direction, size);
-        }
 
-        public void Add(string name, object value = null, DbType? dbType = null, ParameterDirection? direction = null, int? size = null, byte? precision = null, byte? scale = null)
-        {
+        public void Add(string name, object value = null, DbType? dbType = null, ParameterDirection? direction = null, int? size = null, byte? precision = null, byte? scale = null) =>
             Wrapper.Instance.Add(name, value, dbType, direction, size, precision, scale);
-        }
 
         public IEnumerable<string> ParameterNames => Wrapper.Instance.ParameterNames;
 
-        public T Get<T>(string name)
-        {
-            return Wrapper.Instance.Get<T>(name);
-        }
+        public T Get<T>(string name) => Wrapper.Instance.Get<T>(name);
     }
 }

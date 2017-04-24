@@ -18,7 +18,7 @@ using static Dapper.SqlMapper;
 namespace Framework.Data
 {
 
-    public static partial class ModelWrapper
+    internal static partial class ModelWrapper
     {
 
         internal static object WrapParam(IDbConnection conn, object param, CommandType commandType, string sql, out Cache cache)

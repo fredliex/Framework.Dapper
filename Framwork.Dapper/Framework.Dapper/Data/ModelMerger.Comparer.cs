@@ -67,27 +67,10 @@ namespace Framework.Data
                     );
                 });
                 var expBody = Expression.Call(
-                    typeof(Comparer).GetMethod(nameof(CombineHashCodes), BindingFlags.NonPublic | BindingFlags.Static),
+                    typeof(InternalHelper).GetMethod(nameof(InternalHelper.CombineHashCodes), BindingFlags.NonPublic | BindingFlags.Static),
                     Expression.NewArrayInit(typeof(int), expHashArray)
                 );
                 return Expression.Lambda<Func<T, int>>(expBody, new[] { expParamObj }).Compile();
-            }
-
-            private static int CombineHashCodes(int[] hashCodes)
-            {
-                //ref: https://github.com/dotnet/corefx/blob/master/src/Common/src/System/Numerics/Hashing/HashHelpers.cs
-                unchecked
-                {
-                    // RyuJIT optimizes this to use the ROL instruction
-                    // Related GitHub pull request: dotnet/coreclr#1830
-                    int code = 0;
-                    foreach(var n in hashCodes)
-                    {
-                        uint rol5 = ((uint)code << 5) | ((uint)code >> 27);
-                        code = ((int)rol5 + code) ^ n;
-                    }
-                    return code;
-                }
             }
 
             public override bool Equals(T x, T y) => keyEquals(x, y);

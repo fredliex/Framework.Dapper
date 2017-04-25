@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Framework.Data
 {
-    public static class DataModelHelper
+    public static class DbModelHelper
     {
         #region model/object to Dictionary
 
@@ -25,15 +25,15 @@ namespace Framework.Data
 
         public static IDictionary<string, object> ToDictionary(object model) => 
             model == null ? null :
-            model is IDictionary<string, object> dict ? InternalHelper.WrapDictionaryParam(dict) :
+            model is IDictionary<string, object> dict ? InternalDbHelper.WrapDictionaryParam(dict) :
             ModelToDictionary(model);
 
-        public static Dictionary<string, object> ToDictionary(this IDataModel model) =>
-            model == null ? null : DataModelHelper.ModelToDictionary(model);
+        public static Dictionary<string, object> ToDictionary(this IDbModel model) =>
+            model == null ? null : DbModelHelper.ModelToDictionary(model);
 
         #endregion
 
-        public static ModelMerger<T> Merge<T>(this IEnumerable<T> oldModels, IEnumerable<T> newModels, params Expression<Func<T, object>>[] keyExpressions) where T : IDataModel =>
+        public static ModelMerger<T> Merge<T>(this IEnumerable<T> oldModels, IEnumerable<T> newModels, params Expression<Func<T, object>>[] keyExpressions) where T : IDbModel =>
             new ModelMerger<T>(oldModels, newModels, keyExpressions);
     }
 }

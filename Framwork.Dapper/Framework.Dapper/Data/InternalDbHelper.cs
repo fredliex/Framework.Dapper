@@ -11,14 +11,14 @@ using static Framework.Data.ModelWrapper;
 
 namespace Framework.Data
 {
-    internal static class InternalHelper
+    internal static class InternalDbHelper
     {
         private static readonly Action<ILGenerator, object, Type> funcEmitConstant;
 
-        static InternalHelper()
+        static InternalDbHelper()
         {
             var typeILGen = typeof(Expression).Assembly.GetType("System.Linq.Expressions.Compiler.ILGen");
-            InternalHelper.WrapMethod(typeILGen, "EmitConstant", out funcEmitConstant);
+            InternalDbHelper.WrapMethod(typeILGen, "EmitConstant", out funcEmitConstant);
         }
 
         internal static T GetAttribute<T>(this MemberInfo member, bool inhert) where T : Attribute

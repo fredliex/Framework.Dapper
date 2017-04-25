@@ -72,21 +72,21 @@ namespace Framework.Data
 
                 static Dapper()
                 {
-                    InternalHelper.WrapField(typeof(SqlMapper), "smellsLikeOleDb", out smellsLikeOleDb);
-                    InternalHelper.WrapField(typeof(SqlMapper), "literalTokens", out literalTokens);
-                    InternalHelper.WrapField(typeof(SqlMapper), "LinqBinary", out LinqBinary);
-                    InternalHelper.WrapMethod(typeof(SqlMapper), "EmitInt32", out EmitInt32);
-                    InternalHelper.WrapMethod(typeof(SqlMapper), "GetToString", out GetToString);
-                    InternalHelper.WrapMethod(typeof(SqlMapper), "HasTypeHandler", out HasTypeHandler);
-                    InternalHelper.WrapMethod(typeof(SqlMapper), "StoreLocal", out StoreLocal);
-                    InternalHelper.WrapMethod(typeof(SqlMapper), "LoadLocal", out LoadLocal);
-                    InternalHelper.WrapMethod(typeof(SqlMapper), "FlexibleConvertBoxedFromHeadOfStack", out FlexibleConvertBoxedFromHeadOfStack);
-                    InternalHelper.WrapMethod(typeof(SqlMapper), "GetDapperRowDeserializer", out GetDapperRowDeserializer);
-                    InternalHelper.WrapMethod(typeof(SqlMapper), "GetStructDeserializer", out GetStructDeserializer);
-                    InternalHelper.WrapMethod(typeof(SqlMapper), "GetNextSplitDynamic", out GetNextSplitDynamic);
-                    InternalHelper.WrapMethod(typeof(SqlMapper), "GetNextSplit", out GetNextSplit);
+                    InternalDbHelper.WrapField(typeof(SqlMapper), "smellsLikeOleDb", out smellsLikeOleDb);
+                    InternalDbHelper.WrapField(typeof(SqlMapper), "literalTokens", out literalTokens);
+                    InternalDbHelper.WrapField(typeof(SqlMapper), "LinqBinary", out LinqBinary);
+                    InternalDbHelper.WrapMethod(typeof(SqlMapper), "EmitInt32", out EmitInt32);
+                    InternalDbHelper.WrapMethod(typeof(SqlMapper), "GetToString", out GetToString);
+                    InternalDbHelper.WrapMethod(typeof(SqlMapper), "HasTypeHandler", out HasTypeHandler);
+                    InternalDbHelper.WrapMethod(typeof(SqlMapper), "StoreLocal", out StoreLocal);
+                    InternalDbHelper.WrapMethod(typeof(SqlMapper), "LoadLocal", out LoadLocal);
+                    InternalDbHelper.WrapMethod(typeof(SqlMapper), "FlexibleConvertBoxedFromHeadOfStack", out FlexibleConvertBoxedFromHeadOfStack);
+                    InternalDbHelper.WrapMethod(typeof(SqlMapper), "GetDapperRowDeserializer", out GetDapperRowDeserializer);
+                    InternalDbHelper.WrapMethod(typeof(SqlMapper), "GetStructDeserializer", out GetStructDeserializer);
+                    InternalDbHelper.WrapMethod(typeof(SqlMapper), "GetNextSplitDynamic", out GetNextSplitDynamic);
+                    InternalDbHelper.WrapMethod(typeof(SqlMapper), "GetNextSplit", out GetNextSplit);
 
-                    InternalHelper.WrapField(typeof(global::Dapper.DynamicParameters), "EnumerableMultiParameter", out EnumerableMultiParameter);
+                    InternalDbHelper.WrapField(typeof(global::Dapper.DynamicParameters), "EnumerableMultiParameter", out EnumerableMultiParameter);
                 }
 
                 internal static Dictionary<Type, DbType> TypeMap => getTypeMap();

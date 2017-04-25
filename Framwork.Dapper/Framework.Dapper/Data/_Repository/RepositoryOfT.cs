@@ -39,7 +39,7 @@ namespace Framework.Data
         /// <returns></returns>
         public IEnumerable<T> Select(object filter = null, CommandOption? option = null)
         {
-            var filters = InternalHelper.GetElementValues(filter);
+            var filters = InternalDbHelper.GetElementValues(filter);
             if(filters != null) return Selects(filters, option);
             var metadata = GetSelectMetadata(new RepositoryMatedata(null, filter));
             return conn.Query<T>(metadata.SqlStr, metadata.Param, option);
@@ -163,7 +163,7 @@ namespace Framework.Data
                 sqlFilter = GetFilterSection(metadata, true, col => renameFilters[col.ColumnName] = "_old_" + col.MemberName);
                 if (renameFilters.Count > 0)
                 {
-                    var oldValues = DataModelHelper.ToDictionary(metadata.Filter);  //全部條件值
+                    var oldValues = DbModelHelper.ToDictionary(metadata.Filter);  //全部條件值
                     var newParam = new DynamicParameters(metadata.Model); //建立新的參數載具, 以放置model以及filter的資料
                     foreach (var n in renameFilters) newParam.Add(n.Value, oldValues[n.Key]);
                     metadata.Param = newParam;

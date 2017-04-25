@@ -55,7 +55,7 @@ namespace Framework.Data
             if (methodConvertEnum != null) expValue = Expression.Call(methodConvertEnum, expValue);
             if (!IsMultiValue && !elemType.IsClass) expValue = Expression.Convert(expValue, typeof(object));
             //判斷目前資料是否可為null，可以的話就處理NullMapping
-            if (NullMapping != null && InternalHelper.IsNullType(elemType))
+            if (NullMapping != null && InternalDbHelper.IsNullType(elemType))
             {
                 var expNullValue = Expression.Constant(NullMapping, typeof(object));
                 expValue = IsMultiValue ? (Expression)Expression.Call(methodConvertListNull, expValue, expNullValue) : Expression.Coalesce(expValue, expNullValue);
@@ -70,16 +70,16 @@ namespace Framework.Data
         #region 解析model
         /// <summary>依照model解析欄位資訊</summary>
         /// <param name="modelType">model型別</param>
-        /// <param name="isDataModel">是否有繼承IDataModel</param>
+        /// <param name="isDbModel">是否有繼承<see cref="IDbModel"/></param>
         /// <param name="isStructType">model是否為值類型</param>
         /// <returns></returns>
-        internal static IEnumerable<ModelColumnInfo> Resolve(Type modelType, bool? isDataModel = null, bool? isStructModel = null)
+        internal static IEnumerable<ModelColumnInfo> Resolve(Type modelType, bool? isDbModel = null, bool? isStructModel = null)
         {
-            if (!isDataModel.HasValue) isDataModel = typeof(IDataModel).IsAssignableFrom(modelType);
+            if (!isDbModel.HasValue) isDbModel = typeof(IDbModel).IsAssignableFrom(modelType);
             if (!isStructModel.HasValue) isStructModel = modelType.IsValueType;
 
             IEnumerable<ModelColumnInfo> columns;
-            if (isDataModel.Value)
+            if (isDbModel.Value)
             {
                 //這邊只是為了建立一個空的匿名物件字典, key是member name
                 var memberDict = Enumerable.Empty<int>()
@@ -101,7 +101,7 @@ namespace Framework.Data
                         memberDict[member.Name] = new { member, isPublic, isField, attr };
                     }
                 };
-                //有實作IDataModel時為了處理member Attribute的Inherited問題, 所以要順著繼承鍊來處理
+                //有實作IDbModel時為了處理member Attribute的Inherited問題, 所以要順著繼承鍊來處理
                 var inheritLink = new List<Type>();
                 for (var type = modelType; type != typeof(object); type = type.BaseType) inheritLink.Add(type);
                 for (var inheritIndex = inheritLink.Count - 1; inheritIndex >= 0; inheritIndex--)
@@ -125,7 +125,7 @@ namespace Framework.Data
             }
             else
             {
-                //沒實作IDataModel時, 只抓public屬性, 不需逐繼承鍊處理
+                //沒實作IDbModel時, 只抓public屬性, 不需逐繼承鍊處理
                 columns = modelType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
                     .Where(p => p.GetIndexParameters().Length == 0)
                     .Select(p => new ModelColumnInfo(p, null, p.GetAttribute<ColumnAttribute>(false), isStructModel.Value))

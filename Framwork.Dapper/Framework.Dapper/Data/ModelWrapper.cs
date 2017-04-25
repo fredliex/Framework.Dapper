@@ -38,7 +38,7 @@ namespace Framework.Data
                 if (param is IEnumerable<KeyValuePair<string, object>>) return p => new DynamicParameters(p).Wrapper;
 
                 //由ParamWrapper處理
-                var elemParamType = InternalHelper.GetElementType(paramType);
+                var elemParamType = InternalDbHelper.GetElementType(paramType);
                 var paramGenerator = new ParamGeneratorBuilder(elemParamType ?? paramType, commandType, sql, false).CreateGenerator();
                 return elemParamType != null ?
                     new Func<object, object>(p => new EnumerableParamWrapper((IEnumerable)p, paramGenerator)) :

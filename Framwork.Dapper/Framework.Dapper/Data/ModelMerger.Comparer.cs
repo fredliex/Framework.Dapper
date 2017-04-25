@@ -67,7 +67,7 @@ namespace Framework.Data
                     );
                 });
                 var expBody = Expression.Call(
-                    typeof(InternalHelper).GetMethod(nameof(InternalHelper.CombineHashCodes), BindingFlags.NonPublic | BindingFlags.Static),
+                    typeof(InternalDbHelper).GetMethod(nameof(InternalDbHelper.CombineHashCodes), BindingFlags.NonPublic | BindingFlags.Static),
                     Expression.NewArrayInit(typeof(int), expHashArray)
                 );
                 return Expression.Lambda<Func<T, int>>(expBody, new[] { expParamObj }).Compile();

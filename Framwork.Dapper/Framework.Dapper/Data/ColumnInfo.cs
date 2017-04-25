@@ -12,7 +12,6 @@ using static Framework.Data.ModelWrapper;
 namespace Framework.Data
 {
     /// <summary>欄位資訊</summary>
-    /// <remarks>僅針對DataModel使用，Dictionary不會用到。</remarks>
     internal class ColumnInfo
     {
         /// <summary>Model成員名稱</summary>
@@ -51,7 +50,7 @@ namespace Framework.Data
             MemberName = memberName;
             ColumnName = memberName;
 
-            var elemType = InternalHelper.GetElementType(memberType); //抓取集合元素型別, 回傳null表示非多重值
+            var elemType = InternalDbHelper.GetElementType(memberType); //抓取集合元素型別, 回傳null表示非多重值
             IsMultiValue = elemType != null;
             ElementUnderlyingType = ElementType = elemType ?? memberType;
             var isStructType = ElementType.IsValueType; //型別是否為值類型

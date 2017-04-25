@@ -50,7 +50,7 @@ namespace Framework.Data
                 //是Dictionary, 須額外處理EnumMapping
                 if (param is IEnumerable<KeyValuePair<string, object>> dictionary)
                 {
-                    Instance.AddDynamicParams(InternalHelper.WrapDictionaryParam(dictionary));
+                    Instance.AddDynamicParams(InternalDbHelper.WrapDictionaryParam(dictionary));
                     return;
                 }
 

@@ -34,7 +34,7 @@ namespace Framework.Data
                     this.commandType = commandType;
                     this.sql = sql;
                     this.paramType = paramType;
-                    hashCode = InternalHelper.CombineHashCodes(new[] {
+                    hashCode = InternalDbHelper.CombineHashCodes(new[] {
                         connectionString == null ? 0 : StringComparer.Ordinal.GetHashCode(connectionString),
                         commandType.GetHashCode(),
                         sql?.GetHashCode() ?? 0,
@@ -67,7 +67,7 @@ namespace Framework.Data
                     {
                         hashCodes[i] = obj == null ? 0 : obj.GetHashCode();
                     }
-                    return InternalHelper.CombineHashCodes(hashCodes);
+                    return InternalDbHelper.CombineHashCodes(hashCodes);
                 }
             }
 

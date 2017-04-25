@@ -19,7 +19,7 @@ namespace Framework.Test
             [DbValue("cc")]C
         }
 
-        public sealed class NoneKeyModel : IDataModel
+        public sealed class NoneKeyModel : IDbModel
         {
             public NormalEnum norEnum;
             public StringEnum strEnum;
@@ -184,7 +184,7 @@ namespace Framework.Test
         }
 
 
-        public sealed class KeyModel : IDataModel
+        public sealed class KeyModel : IDbModel
         {
             [Column(Behavior = ColumnBehavior.Key)]
             public NormalEnum keyCol;
@@ -391,7 +391,7 @@ namespace Framework.Test
 
 
         #region Model Merge
-        public sealed class MergeModel : IDataModel
+        public sealed class MergeModel : IDbModel
         {
             [Column(Behavior = ColumnBehavior.Key)]
             public string a;

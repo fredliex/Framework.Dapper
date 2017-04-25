@@ -37,7 +37,7 @@ namespace Framework.Data
             }
 
             var paramType = filter.GetType();
-            elemType = InternalHelper.GetElementType(paramType) ?? paramType;
+            elemType = InternalDbHelper.GetElementType(paramType) ?? paramType;
 
             return ModelTableInfo.Get(elemType).Columns;
         }

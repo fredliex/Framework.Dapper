@@ -42,11 +42,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Data\ColumnAttribute.cs" />
+    <Compile Include="Data\_Attributes\ColumnAttribute.cs" />
     <Compile Include="Data\ColumnBehavior.cs" />
     <Compile Include="Data\ColumnInfo.cs" />
     <Compile Include="Data\CommandOption.cs" />
-    <Compile Include="Data\DataModelHelper.cs" />
+    <Compile Include="Data\DbModelHelper.cs" />
     <Compile Include="Data\_Repository\IRepository.cs" />
     <Compile Include="Data\ModelColumnInfoCollection.cs">
       <DependentUpon>ModelColumnInfo.cs</DependentUpon>
@@ -71,8 +71,8 @@
       <DependentUpon>DbWrapperHelper.cs</DependentUpon>
     </Compile>
     <Compile Include="Data\_DbWrapper\IDbCommandIntercept.cs" />
-    <Compile Include="Data\IDataModel.cs" />
-    <Compile Include="Data\InternalHelper.cs" />
+    <Compile Include="Data\IDbModel.cs" />
+    <Compile Include="Data\InternalDbHelper.cs" />
     <Compile Include="Data\ModelColumnInfo.cs" />
     <Compile Include="Data\ModelWrapper.Cache.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>
@@ -96,12 +96,12 @@
     <Compile Include="Data\ModelWrapper.Reflect.cs">
       <DependentUpon>ModelWrapper.cs</DependentUpon>
     </Compile>
-    <Compile Include="Data\NonColumnAttribute.cs" />
+    <Compile Include="Data\_Attributes\NonColumnAttribute.cs" />
     <Compile Include="Data\_Repository\Repository.cs" />
     <Compile Include="Data\_Repository\RepositoryMatedata.cs" />
-    <Compile Include="Data\TableAttribute.cs" />
+    <Compile Include="Data\_Attributes\TableAttribute.cs" />
     <Compile Include="Data\ModelTableInfo.cs" />
-    <Compile Include="Data\DbValueAttribute.cs" />
+    <Compile Include="Data\_Attributes\DbValueAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

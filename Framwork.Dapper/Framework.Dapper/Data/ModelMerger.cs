@@ -9,7 +9,7 @@ using System.Reflection;
 
 namespace Framework.Data
 {
-    public sealed partial class ModelMerger<T> where T : IDataModel
+    public sealed partial class ModelMerger<T> where T : IDbModel
     {
         private static Comparer defaultComparer = null;
         private Comparer comparer;

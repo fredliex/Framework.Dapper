@@ -107,7 +107,7 @@ namespace Framework.Test
         #endregion
 
         #region PublicInternalModel
-        internal sealed class PublicInternalModel : IDataModel
+        internal sealed class PublicInternalModel : IDbModel
         {
             public string strCol1;
             public string strCol2 { get; set; }
@@ -170,7 +170,7 @@ namespace Framework.Test
         #endregion
 
         #region PublicInternalStruct
-        internal struct PublicInternalStruct : IDataModel
+        internal struct PublicInternalStruct : IDbModel
         {
             public string strCol1;
             public string strCol2 { get; set; }
@@ -256,7 +256,7 @@ namespace Framework.Test
             B = 2,
             C = 3
         }
-        public sealed class EnumMappingModel : IDataModel
+        public sealed class EnumMappingModel : IDbModel
         {
             public NormalEnum norEnum;
             public StringEnum strEnum;
@@ -315,7 +315,7 @@ namespace Framework.Test
         #endregion
 
         #region Nullable
-        internal sealed class NullableModel : IDataModel
+        internal sealed class NullableModel : IDbModel
         {
             public NormalEnum? norEnum;
             public StringEnum? strEnum;
@@ -370,7 +370,7 @@ namespace Framework.Test
         #endregion
 
         #region NullMapping
-        public sealed class NullMappingModel : IDataModel
+        public sealed class NullMappingModel : IDbModel
         {
             [Column(NullMapping = 10)]
             public NormalEnum? norEnum;
@@ -586,7 +586,7 @@ namespace Framework.Test
 
 
         #region Model轉Dictionary
-        public sealed class DictionaryModel : IDataModel
+        public sealed class DictionaryModel : IDbModel
         {
             public int intCol;
 
@@ -622,7 +622,7 @@ namespace Framework.Test
                 nullStrEnum = StringEnum.C,
                 nullStrEnumArray = new StringEnum?[] { StringEnum.A, StringEnum.B, StringEnum.C }
             };
-            var dict = DataModelHelper.ToDictionary(model);
+            var dict = DbModelHelper.ToDictionary(model);
             Assert.Equal(model.intCol, dict[nameof(DictionaryModel.intCol)]);
             Assert.Equal((int)model.nullNorEnum, dict[nameof(DictionaryModel.nullNorEnum)]);
             Assert.Equal("cc", dict[nameof(DictionaryModel.nullStrEnum)]);
@@ -633,7 +633,7 @@ namespace Framework.Test
 
             // null mapping 
             model = new DictionaryModel { nullStrEnumArray = new StringEnum?[] { null, null, null } };
-            dict = DataModelHelper.ToDictionary(model);
+            dict = DbModelHelper.ToDictionary(model);
             Assert.Equal("A", dict[nameof(DictionaryModel.nullNorEnum)]);
             Assert.Equal(10, dict[nameof(DictionaryModel.nullStrEnum)]);
             Assert.Equal(2D, dict[nameof(DictionaryModel.strCol)]);
@@ -688,7 +688,7 @@ namespace Framework.Test
         #endregion
 
         #region member default value
-        public class MemberDefaultModel : IDataModel
+        public class MemberDefaultModel : IDbModel
         {
             public int intNoneDefault { get; set; }
             public int colInt { get; set; } = 10;

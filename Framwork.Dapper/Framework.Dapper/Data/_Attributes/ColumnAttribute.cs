@@ -22,7 +22,7 @@ namespace Framework.Data
         /// <para>意謂若model屬性為null則資料庫欄位值會放NullMapping的值。</para>
         /// <para>相對的，若資料庫欄位為NullMapping的值，查詢出來的時候model的屬性值也會是null。。</para>
         /// </summary>
-        public object NullMapping = null;
+        public object NullDbValue = null;
 
         /// <summary>欄位資訊</summary>
         /// <param name="name">對應欄位名稱, 若為null或為string.Empty示意為同類型名稱。</param>

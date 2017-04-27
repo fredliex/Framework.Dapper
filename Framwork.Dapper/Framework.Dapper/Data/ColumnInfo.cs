@@ -74,7 +74,7 @@ namespace Framework.Data
                 IsKey = (behavior & ColumnBehavior.Key) != 0;
                 IsTrimRight = (behavior & ColumnBehavior.TrimRight) != 0;
                 //如果model屬性類型為可null的，則設定model屬性為null時資料庫對應的特定值
-                if (!isStructType || nullableType != null) NullMapping = columnAttribute.NullMapping;
+                if (!isStructType || nullableType != null) NullMapping = columnAttribute.NullDbValue;
             }
         }
 

@@ -9,9 +9,10 @@ namespace Framework.Data
 {
     /// <summary>
     /// <para>設定列舉在資料庫中的對應值。僅適用於Enum的成員。</para>
-    /// <para>一旦Enum有任何一個成員有設定ValueAttribute時, 會檢查設定的值必須為值類型且類型必須都一致。另外存入資料庫時, 將檢查存入值必須是有定義ValueAttribute的。</para>
-    /// <para>model存入資料庫的時候，會先處理 ValueAttribute 的null值 再處理 ColumnAttribute的NullMapping。</para>
-    /// <para>資料庫轉成model的時候，會先處理 ColumnAttribute的NullMapping 再處理 ValueAttribute 的null值。</para>
+    /// <para>通常只有Enum須對應string或是char的時候才會用到<see cref="DbValueAttribute"/>。</para>
+    /// <para>一旦Enum有任何一個成員有設定<see cref="DbValueAttribute"/>時, 會檢查設定的值必須為值類型且類型必須都一致。另外存入資料庫時, 將檢查存入值必須是有定義<see cref="DbValueAttribute"/>的。</para>
+    /// <para>model存入資料庫的時候，會先處理 <see cref="DbValueAttribute.Value"/> 的null值 再處理 <see cref="ColumnAttribute.NullDbValue"/>。</para>
+    /// <para>資料庫轉成model的時候，會先處理 <see cref="ColumnAttribute.NullDbValue"/> 再處理 <see cref="DbValueAttribute.Value"/>的null值。</para>
     /// </summary>
     [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
     public sealed class DbValueAttribute : Attribute
@@ -75,7 +76,7 @@ namespace Framework.Data
 
             //沒有dbValueUnderlyingType表示並無定義DbValueAttribute, 就回傳null
             if (dbValueUnderlyingType == null) return null;
-            if (enumType.IsDefined(typeof(FlagsAttribute))) throw new NotSupportedException("目前不支援有標示FlagsAttribute的列舉");
+            if (enumType.IsDefined(typeof(FlagsAttribute))) throw new NotSupportedException($"目前不支援有標示{nameof(FlagsAttribute)}的列舉");
             return list;
         }
     }

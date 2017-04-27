@@ -8,9 +8,7 @@ using System.Threading.Tasks;
 
 namespace Framework.Data
 {
-    /// <summary>
-    /// 
-    /// </summary>
+    /// <summary>DbCommand攔截器</summary>
     public interface IDbCommandIntercept
     {
         /// <summary>

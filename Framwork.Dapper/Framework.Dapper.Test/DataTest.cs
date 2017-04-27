@@ -372,15 +372,15 @@ namespace Framework.Test
         #region NullMapping
         public sealed class NullMappingModel : IDbModel
         {
-            [Column(NullMapping = 10)]
+            [Column(NullDbValue = 10)]
             public NormalEnum? norEnum;
-            [Column(NullMapping = "A")]
+            [Column(NullDbValue = "A")]
             public StringEnum? strEnum;
-            [Column(NullMapping = 2D)] //docuble
+            [Column(NullDbValue = 2D)] //docuble
             public string strCol;
-            [Column(NullMapping = 3L)] //long
+            [Column(NullDbValue = 3L)] //long
             public int? intCol;
-            [Column(NullMapping = NormalEnum.A)]
+            [Column(NullDbValue = NormalEnum.A)]
             public decimal? decimalCol;
         }
 
@@ -590,22 +590,22 @@ namespace Framework.Test
         {
             public int intCol;
 
-            [Column(NullMapping = "A")]
+            [Column(NullDbValue = "A")]
             public NormalEnum? nullNorEnum;
 
-            [Column(NullMapping = 10)]
+            [Column(NullDbValue = 10)]
             public StringEnum? nullStrEnum;
 
-            [Column(NullMapping = 2D)] //double
+            [Column(NullDbValue = 2D)] //double
             public string strCol;
 
-            [Column(NullMapping = 3L)] //long
+            [Column(NullDbValue = 3L)] //long
             public int? nullIntCol;
 
-            [Column(NullMapping = NormalEnum.A)]
+            [Column(NullDbValue = NormalEnum.A)]
             public decimal? nullDecimalCol;
 
-            [Column(NullMapping = 10)]
+            [Column(NullDbValue = 10)]
             public StringEnum?[] nullStrEnumArray;
         }
 
